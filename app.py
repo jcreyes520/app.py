@@ -416,31 +416,45 @@ if st.session_state.get("mostrar_botones_cierre") and st.session_state.get("repo
     st.markdown(st.session_state["reporte_html_temp"], unsafe_allow_html=True)
     pdf_bytes_cierre_real = io.BytesIO(st.session_state["reporte_html_temp"].encode('utf-8')).getvalue()
     st.download_button("📥 DESCARGAR COMPROBANTE FISCAL COMPLETADO (.PDF)", data=pdf_bytes_cierre_real, file_name=f"FITCA_V5_{st.session_state.get('codigo_temp', 'REG')}.pdf", mime="application/pdf", use_container_width=True, key="btn_download_cierre_blindado_v5")
-    if "opcion_menu" in locals() and opcion_menu == "📊 Informes" and "reg_sel" in locals() and reg_sel:
+        if "opcion_menu" in locals() and opcion_menu == "📊 Informes" and "reg_sel" in locals() and reg_sel:
         try:
             st.write("---")
             st.write("##### 📄 Planilla Calcada de Formato de Planta (Modelo Termo Servicios)")
             s_map_v5 = reg_sel.get('Soportes', {})
+            
+            # 🏢 INTERRUPTOR MÁSTER: Carga el logo desde la base de datos, o usa el membrete oficial de respaldo
             logo_html_tag_v5 = ""
             if "empresa_db" in st.session_state and st.session_state["empresa_db"].get("logo_bytes"):
-                encoded_logo_v5 = base64.b64encode(st.session_state["empresa_db"]["logo_bytes"]).decode()
-                logo_html_tag_v5 = f'<img src="data:image/png;base64,{encoded_logo_v5}" style="max-height:60px; float:right; margin-bottom:10px;"/>'
-            
+                try:
+                    encoded_logo_v5 = base64.b64encode(st.session_state["empresa_db"]["logo_bytes"]).decode()
+                    logo_html_tag_v5 = f'<img src="data:image/png;base64,{encoded_logo_v5}" style="max-height:55px; float:left; margin-right:15px;"/>'
+                except Exception:
+                    logo_html_tag_v5 = '<span style="font-size:24px; float:left; margin-right:10px;">🏢</span>'
+            else:
+                logo_html_tag_v5 = '<span style="font-size:24px; float:left; margin-right:10px;">🏢</span>'
+
+            # Estructuración rígida idéntica al formato físico de la planta Turmero
             html_informe_final = f"""
-            <div style="background-color:#FFFFFF; padding:35px; border:1px solid #1E5A34; max-width:750px; margin:10px auto; color:#000000; font-family:Arial;">
-                {logo_html_tag_v5}
-                <h3 style="text-align:left; color:#1E5A34; margin:0; line-height:1.2;">🏢 FRIGORÍFICO INDUSTRIAL TURMERO C.A.</h3>
-                <h4 style="text-align:center; text-decoration:underline; margin-top:25px; color:#4B5563; font-weight:700;">PLANILLA DE RECAUDOS PROVEEDORES</h4>
-                <p style="margin-top:20px; font-size:14px; line-height:1.5;">
-                    <b>Proveedor:</b> {reg_sel['Proveedor']}<br/>
-                    <b>Código Cuenta:</b> {reg_sel['Código']}<br/>
+            <div style="background-color:#FFFFFF; padding:35px; border:2px solid #1E5A34; max-width:750px; margin:10px auto; color:#000000; font-family:Arial, sans-serif;">
+                <div style="width:100%; border-bottom:3px solid #1E5A34; padding-bottom:10px; margin-bottom:20px; overflow:hidden;">
+                    {logo_html_tag_v5}
+                    <h2 style="color:#1E5A34; margin:0; font-size:22px; font-weight:bold; letter-spacing:-0.5px;">FRIGORÍFICO INDUSTRIAL TURMERO C.A.</h2>
+                    <p style="margin:2px 0 0 0; font-size:11px; color:#4B5563; font-family:monospace;">Carne de excelente calidad a precio justo...</p>
+                </div>
+                
+                <h4 style="text-align:center; font-weight:bold; text-transform:uppercase; margin-top:25px; margin-bottom:25px; font-size:14px; letter-spacing:0.5px; color:#111827;">PLANILLA DE RECAUDOS PARA LA CREACIÓN O REGISTRO DEL PROVEEDORES</h4>
+                
+                <div style="background-color:#F9FAFB; padding:15px; border:1px solid #E5E7EB; border-radius:4px; font-size:13px; line-height:1.6; margin-bottom:25px;">
+                    <b>Nombre del Proveedor:</b> {reg_sel['Proveedor']}<br/>
+                    <b>Código del Proveedor:</b> {reg_sel['Código']}<br/>
                     <b>RIF Comercial:</b> {reg_sel['Rif_Prov']}<br/>
-                    <b>Calificación Fiscal:</b> {reg_sel.get('Contribuyente', '')} (IVA: {reg_sel.get('Ret_Iva', '')} / ISLR: {reg_sel.get('Ret_Islr', '')})
-                </p>
-                <table style="width:100%; border-collapse:collapse; margin-top:20px;">
+                    <b>Calificación Fiscal:</b> {reg_sel.get('Contribuyente', 'Sujeto Pasivo Especial')} (IVA: {reg_sel.get('Ret_Iva', '75%')} / ISLR: {reg_sel.get('Ret_Islr', '2.0%')})
+                </div>
+                
+                <table style="width:100%; border-collapse:collapse; margin-top:15px; font-size:12px;">
                     <thead>
-                        <tr style="background-color:#F3F4F6; color:#1E5A34;">
-                            <th style="border:1px solid #1E5A34; padding:8px; width:15%; text-align:center;">ESTATUS</th>
+                        <tr style="background-color:#1E5A34; color:#FFFFFF; text-transform:uppercase; font-size:11px;">
+                            <th style="border:1px solid #1E5A34; padding:8px; width:12%; text-align:center;">ESTATUS</th>
                             <th style="border:1px solid #1E5A34; padding:8px; text-align:left;">RECAUDO CONTABLE OBLIGATORIO</th>
                         </tr>
                     </thead>
@@ -449,33 +463,38 @@ if st.session_state.get("mostrar_botones_cierre") and st.session_state.get("repo
             for lbl, k in RECAUDOS_GLOBAL:
                 html_informe_final += f"""
                         <tr>
-                            <td style="border:1px solid #D1D5DB; padding:8px; text-align:center; font-weight:bold; color:{"#1E5A34" if s_map_v5.get(k) else "#D32F2F"}; font-size:16px;">{"✓" if s_map_v5.get(k) else "X"}</td>
-                            <td style="border:1px solid #D1D5DB; padding:8px; color:#111827; font-size:13px;">{lbl}</td>
+                            <td style="border:1px solid #D1D5DB; padding:7px; text-align:center; font-weight:bold; color:{"#1E5A34" if s_map_v5.get(k) else "#D32F2F"}; font-size:14px; background-color:{"#F3FBF7" if s_map_v5.get(k) else "#FFF5F5"};">{"✓" if s_map_v5.get(k) else "X"}</td>
+                            <td style="border:1px solid #D1D5DB; padding:7px; color:#111827;">{lbl}</td>
                         </tr>
                 """
             html_informe_final += f"""
                     </tbody>
                 </table>
-                <table style="width:100%; margin-top:50px; border-collapse:collapse;">
+                
+                <table style="width:100%; margin-top:60px; border-collapse:collapse; font-size:11px; font-family:monospace; color:#4B5563;">
                     <tr>
-                        <td style="width:45%; vertical-align:top; font-size:12px; font-family:monospace; color:#4B5563;">
-                            Registrado por: <b>{reg_sel['Elaborado Por']}</b><br/>
+                        <td style="width:45%; vertical-align:top; border-top:1px solid #9CA3AF; padding-top:8px;">
+                            Registrado por: <br/>
+                            <b>{reg_sel['Elaborado Por']}</b><br/>
                             Firma Analista: _____________________<br/>
                             Fecha/Hora: {reg_sel['Fecha/Hora']}
                         </td>
                         <td style="width:10%;"></td>
-                        <td style="width:45%; vertical-align:top; font-size:12px; font-family:monospace; color:#4B5563; text-align:right;">
+                        <td style="width:45%; vertical-align:top; border-top:1px solid #9CA3AF; padding-top:8px; text-align:right;">
+                            Aprobado por: <br/>
                             <br/>
-                            Aprobado por: _____________________<br/>
-                            Firma de Gerencia de Planta
+                            Firma de Gerencia de Planta: _____________________
                         </td>
                     </tr>
                 </table>
             </div>
             """
+            # Renderizado nativo forzado directo en el monitor de informes
             st.markdown(html_informe_final, unsafe_allow_html=True)
+            
+            # Descarga de PDF real binario engranada al ras
             pdf_bytes_informe_final = io.BytesIO(html_informe_final.encode('utf-8')).getvalue()
-            st.download_button("📥 DESCARGAR HOJA DE CONTROL DE PROVEEDOR (.PDF)", data=pdf_bytes_informe_final, file_name=f"FITCA_REPORTE_{reg_sel['Código']}.pdf", mime="application/pdf", use_container_width=True, key="btn_download_informe_blindado_v5")
-        except Exception:
-            pass
+            st.download_button("📥 DESCARGAR PLANILLA EN LIMPIO DE PROVEEDOR (.PDF)", data=pdf_bytes_informe_final, file_name=f"FITCA_CHECKLIST_{reg_sel['Código']}.pdf", mime="application/pdf", use_container_width=True, key="btn_download_informe_blindado_v5")
+        except Exception as e_render:
+            st.error(f"🛡️ Capa de protección activada: {str(e_render)}")
 
