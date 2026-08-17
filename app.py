@@ -88,6 +88,7 @@ else:
     with c_h1: st.markdown("<h4 style='color:#1E5A34; margin:0;'>🏢 FRIGORÍFICO INDUSTRIAL TURMERO C.A.</h4>", unsafe_allow_html=True)
     with c_h2: st.markdown(f'<p class="main-title">{emp["rs"]}</p><p class="sub-title">RIF: {emp["rif"]} | PLANTA: {emp["dir"]}</p>', unsafe_allow_html=True)
     st.markdown('</div>', unsafe_allow_html=True)
+
     if opcion_menu == "⚙️ Configuración":
         st.write("#### ⚙️ PANEL DE CONFIGURACIÓN ADMINISTRATIVA Y PARÁMETROS (SGP)")
         st.write("##### 🏢 1. Parámetros de Identificación de la Empresa y Carga de Logo")
@@ -117,13 +118,6 @@ else:
             n_rol = st.selectbox("Nivel de Acceso Contable / Rol:", ["Compras", "Contabilidad"])
         with cu2:
             n_ape = st.text_input("Apellido del Funcionario:", placeholder="Ej: Rojas")
-            n_clv = st.text_input("Clave de Acceso Secreta:", type="password", placeholder="••••••••")
-        if st.button("➕ Autorizar y Grabar Nuevo Analista", use_container_width=True):
-            if n_nom and n_ape and n_usr and n_clv:
-                st.session_state["usuarios_db"].append({"nombre": n_nom, "apellido": n_ape, "usuario": n_usr, "clave": n_clv, "rol": n_rol})
-                st.success(f"✅ Analista '{n_nom} {n_ape}' autorizado con éxito."); st.rerun()
-            else: st.error("❌ ERROR: Complete todos los campos de usuario.")
-
     elif opcion_menu == "Planilla de Solicitudes":
         st.write("#### 📝 PLANILLA DE REGISTRO PREVIO (ENTRADA DE DATOS)")
         accion_planilla = st.radio("Operación Contable:", ["➕ Registrar Nuevo Proveedor", "✏️ Modificar / Actualizar Proveedor Existente"], horizontal=True)
@@ -162,7 +156,6 @@ else:
         t_prov = st.text_input("Teléfono Obligatorio de Planta:", value=val_telefono, placeholder="0244-XXXXXXX")
         p_cont = st.text_input("Persona / Contacto de Ventas Autorizado:", value=val_contacto, placeholder="Contacto")
         e_prov = st.text_input("Correo Electrónico / Mail de Operaciones:", value=val_correo, placeholder="correo@proveedor.com")
-        rif_vigente_real = True 
         tipo_sujeto_sel = st.selectbox("Calificación Fiscal del Contribuyente:", ["Sujeto Pasivo Especial (Especial)", "Contribuyente Ordinario"])
 
         st.write("##### 3. Gestión Multi-Cuenta Financiera (Hasta 3 Canales de Transferencia)")
@@ -195,6 +188,14 @@ else:
         if activar_c3:
             st.markdown("**[CANAL BANCARIO N° 3 Opcional]**")
             cb3_1, cb3_2, cb3_3, cb3_4 = st.columns([1, 1, 0.8, 1.2])
+            with cb3_1: bco_3 = st.selectbox("Banco Destino (C3):", BCOS_LISTA_REAL, index=BCOS_LISTA_REAL.index(val_cuentas.get("c3_bco")) if val_cuentas.get("c3_bco") in BCOS_LISTA_REAL else 0, key="bco3")
+            with cb3_2: ben_3 = st.text_input("Nombre Beneficiario Pago (C3):", value=val_cuentas.get("c3_ben"), key="ben3")
+            with cb3_3: t_ben_3 = st.selectbox("Tipo Documento (C3):", ["Empresa (RIF)", "Persona Natural (Cédula)"], index=0 if val_cuentas.get("c3_tipo") == "Empresa (RIF)" else 1, key="t_ben3")
+            with cb3_4:
+                if t_ben_3 == "Persona Natural (Cédula)": doc_3 = st.text_input("Cédula de Identidad del Beneficiario (C3):", value=val_cuentas.get("c3_doc"), key="doc3")
+                else: doc_3 = st.text_input("RIF Cuenta Beneficiario (C3):", value=val_cuentas.get("c3_doc"), key="doc3")
+            n_cta_20_3 = st.text_input("N° Cuenta Nacional - 20 dígitos (C3):", value=val_cuentas.get("c3_num"), max_chars=20, key="n_cta3")
+
         st.write("##### 4. Checklist Contable y Soportes para Canal Bancario N° 1 (Principal)")
         chks = {}; files_bytes = {}; documentos_faltantes = []
         for lbl, k in RECAUDOS_GLOBAL:
@@ -218,283 +219,3 @@ else:
                 ahora_str = datetime.now().strftime("%d/%m/%Y %I:%M %p")
                 res_soportes = {k: chks[k] for k in chks}
                 txt_faltantes = ", ".join(documentos_faltantes) if documentos_faltantes else "Ninguno"
-                estatus_final = "Pendiente por Soportes" if documentos_faltantes else "Aprobado"
-                cuentas_dict = {"c1_bco": bco_1, "c1_ben": ben_1, "c1_tipo": t_ben_1, "c1_doc": doc_1, "c1_num": n_cta_cleaned, "c2_bco": bco_2, "c2_ben": ben_2, "c2_tipo": t_ben_2, "c2_doc": doc_2, "c2_num": "".join(n_cta_2.split()), "c3_bco": bco_3, "c3_ben": ben_3, "c3_tipo": t_ben_3, "c3_doc": doc_3, "c3_num": "".join(n_cta_20_3.split())}
-                ret_iva_val = "75%" if tipo_sujeto_sel == "Sujeto Pasivo Especial (Especial)" else "0%"
-                ret_islr_val = "2.0%" if tipo_sujeto_sel == "Sujeto Pasivo Especial (Especial)" else "1.0%"
-                nuevo_registro = {"Fecha/Hora": ahora_str, "Código": int(c_prov), "Proveedor": n_prov.upper(), "Rif_Prov": r_prov.upper(), "Contacto": p_cont, "Correo": e_prov, "Teléfono": t_prov, "Tipo": tipo_prov, "Elaborado Por": persona_elabora, "Soportes": res_soportes, "Notas": obs_compras, "Faltantes": txt_faltantes, "Estatus": estatus_final, "Archivos": files_bytes, "Cuentas_Bancarias": cuentas_dict, "Ret_Iva": ret_iva_val, "Ret_Islr": ret_islr_val, "Contribuyente": tipo_sujeto_sel}
-                match_existente = next((idx for idx, item in enumerate(st.session_state["bitacora_db"]) if item["Código"] == int(c_prov)), None)
-                if match_existente is not None: st.session_state["bitacora_db"][match_existente] = nuevo_registro
-                else: st.session_state["bitacora_db"].append(nuevo_registro)
-
-                logo_html_tag = ""
-                if emp.get("logo_bytes"):
-                    encoded_logo = base64.b64encode(emp["logo_bytes"]).decode()
-                    logo_html_tag = f'<img src="data:image/png;base64,{encoded_logo}" style="max-height:60px; float:right; margin-bottom:10px;"/>'
-
-                html_rep_inf_temp = f"""
-                <div style="background-color:#FFFFFF; padding:35px; border:1px solid #1E5A34; max-width:750px; margin:10px auto; color:#000000; font-family:Arial;">
-                    {logo_html_tag}
-                    <h3 style="text-align:left; color:#1E5A34; margin:0; line-height:1.2;">🏢 FRIGORÍFICO INDUSTRIAL TURMERO C.A.</h3>
-                    <h4 style="text-align:center; text-decoration:underline; margin-top:25px; color:#4B5563; font-weight:700;">PLANILLA DE RECAUDOS PROVEEDORES</h4>
-                    <p style="margin-top:20px; font-size:14px; line-height:1.5;">
-                        <b>Proveedor:</b> {n_prov.upper()}<br/>
-                        <b>Código Cuenta:</b> {c_prov}<br/>
-                        <b>RIF Comercial:</b> {r_prov.upper()}<br/>
-                        <b>Calificación Fiscal:</b> {tipo_sujeto_sel} (IVA: {ret_iva_val} / ISLR: {ret_islr_val})
-                    </p>
-                    <table style="width:100%; border-collapse:collapse; margin-top:20px;">
-                        <thead>
-                            <tr style="background-color:#F3F4F6; color:#1E5A34;">
-                                <th style="border:1px solid #1E5A34; padding:8px; width:15%; text-align:center;">ESTATUS</th>
-                                <th style="border:1px solid #1E5A34; padding:8px; text-align:left;">RECAUDO CONTABLE OBLIGATORIO</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                """
-                for lbl, k in RECAUDOS_GLOBAL:
-                    html_rep_inf_temp += f"""
-                            <tr>
-                                <td style="border:1px solid #D1D5DB; padding:8px; text-align:center; font-weight:bold; color:{"#1E5A34" if res_soportes.get(k) else "#D32F2F"}; font-size:16px;">{"✓" if res_soportes.get(k) else "X"}</td>
-                                <td style="border:1px solid #D1D5DB; padding:8px; color:#111827; font-size:13px;">{lbl}</td>
-                            </tr>
-                    """
-                html_rep_inf_temp += f"""
-                        </tbody>
-                    </table>
-                    <table style="width:100%; margin-top:50px; border-collapse:collapse;">
-                        <tr>
-                            <td style="width:45%; vertical-align:top; font-size:12px; font-family:monospace; color:#4B5563;">
-                                Registrado por: <b>{persona_elabora}</b><br/>
-                                Firma Analista: _____________________<br/>
-                                Fecha/Hora: {ahora_str}
-                            </td>
-                            <td style="width:10%;"></td>
-                            <td style="width:45%; vertical-align:top; font-size:12px; font-family:monospace; color:#4B5563; text-align:right;">
-                                <br/>
-                                Aprobado por: _____________________<br/>
-                                Firma de Gerencia de Planta
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-                """
-                st.session_state["reporte_html_temp"] = html_rep_inf_temp
-                st.session_state["codigo_temp"] = c_prov; st.session_state["mostrar_botones_cierre"] = True
-                lista_destinatarios = ", ".join(st.session_state["correos_recepcion_list"])
-                st.success(f"✅ REGISTRO MAESTRO PROCESADO CON ÉXITO. Expediente enviado por mail a: {lista_destinatarios}")
-
-        if st.session_state["mostrar_botones_cierre"]:
-            st.write("---")
-            st.markdown(st.session_state["reporte_html_temp"], unsafe_allow_html=True)
-            c_bl1, c_b2 = st.columns(2)
-            pdf_bytes_reporte_directo = io.BytesIO(st.session_state["reporte_html_temp"].encode('utf-8')).getvalue()
-            c_bl1.download_button("📥 DESCARGAR COMPROBANTE FISCAL (.PDF)", data=pdf_bytes_reporte_directo, file_name=f"FITCA_V5_{st.session_state['codigo_temp']}.pdf", mime="application/pdf", use_container_width=True)
-            if c_b2.button("🖨️ EMITIR IMPRESIÓN FÍSICA DIRECTA", use_container_width=True, key="print_direct_final_btn"): st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
-
-    elif opcion_menu == "📊 Informes":
-        st.write("#### 📊 CONSULTA DE REPORTES Y AUDITORÍA INTEGRAL")
-        if len(st.session_state["bitacora_db"]) > 0:
-            df_provs = pd.DataFrame(st.session_state["bitacora_db"])
-            st.dataframe(df_provs[["Código", "Proveedor", "Rif_Prov", "Faltantes", "Estatus"]], use_container_width=True, hide_index=True)
-            list_options = df_provs.apply(lambda row: f"{row['Código']} - {row['Proveedor']}", axis=1).tolist()
-            selected_prov = st.selectbox("📋 Historial Multi-Cuenta Técnico:", list_options, key="select_prov_informe")
-            codigo_sel = int(selected_prov.split(" - ")[0].strip()) if selected_prov else None
-            reg_sel = next((item for item in st.session_state["bitacora_db"] if item["Código"] == codigo_sel), None)
-            
-            if reg_sel:
-                st.markdown(f"**Proveedor:** {reg_sel['Proveedor']} | **RIF:** {reg_sel['Rif_Prov']} | **Clasificación Contable:** `{reg_sel.get('Tipo')}` | **Calificación SENIAT:** `{reg_sel.get('Contribuyente')}` (IVA: {reg_sel.get('Ret_Iva')} / ISLR: {reg_sel.get('Ret_Islr')})")
-                c_maps = reg_sel.get('Cuentas_Bancarias', {})
-                st.markdown(f"**C1 Principal:** Banco: {c_maps.get('c1_bco')} | Beneficiario: {c_maps.get('c1_ben')} | N° Cuenta: `{c_maps.get('c1_num')}`")
-                if c_maps.get('c2_num'): st.markdown(f"**C2 Opcional:** Banco: {c_maps.get('c2_bco')} | N° Cuenta: `{c_maps.get('c2_num')}`")
-                if c_maps.get('c3_num'): st.markdown(f"**C3 Opcional:** Banco: {c_maps.get('c3_bco')} | N° Cuenta: `{c_maps.get('c3_num')}`")
-                st.markdown(f"""<div style="background-color:#FFEBEE; padding:12px; border-left:5px solid #D32F2F; color:#C62828; font-family:monospace;">⚠️ <b>RECAUDOS PENDIENTES AUDITORÍA FITCA:</b> {reg_sel['Faltantes']}</div>""", unsafe_allow_html=True)
-                
-                st.write("##### 📂 Descarga Directa de Recaudos Digitalizados:")
-                f_col1, f_col2 = st.columns(2)
-                st.write("---")
-                st.write("##### 📄 Planilla Calcada de Formato de Planta")
-                
-                logo_html_tag = ""
-                if "empresa_db" in st.session_state and st.session_state["empresa_db"].get("logo_bytes"):
-                    try:
-                        encoded_logo = base64.b64encode(st.session_state["empresa_db"]["logo_bytes"]).decode()
-                        logo_html_tag = f'<img src="data:image/png;base64,{encoded_logo}" style="max-height:60px; float:right; margin-bottom:10px;"/>'
-                    except Exception:
-                        logo_html_tag = ""
-                
-                html_rep_inf = f"""
-                <div style="background-color:#FFFFFF; padding:35px; border:1px solid #1E5A34; max-width:750px; margin:10px auto; color:#000000; font-family:Arial;">
-                    {logo_html_tag}
-                    <h3 style="text-align:left; color:#1E5A34; margin:0; line-height:1.2;">🏢 FRIGORÍFICO INDUSTRIAL TURMERO C.A.</h3>
-                    <h4 style="text-align:center; text-decoration:underline; margin-top:25px; color:#4B5563; font-weight:700;">PLANILLA DE RECAUDOS PROVEEDORES</h4>
-                    <p style="margin-top:20px; font-size:14px; line-height:1.5;">
-                        <b>Proveedor:</b> {reg_sel['Proveedor']}<br/>
-                        <b>Código Cuenta:</b> {reg_sel['Código']}<br/>
-                        <b>RIF Comercial:</b> {reg_sel['Rif_Prov']}<br/>
-                        <b>Calificación Fiscal:</b> {reg_sel.get('Contribuyente', '')} (IVA: {reg_sel.get('Ret_Iva', '')} / ISLR: {reg_sel.get('Ret_Islr', '')})
-                    </p>
-                    <table style="width:100%; border-collapse:collapse; margin-top:20px;">
-                        <thead>
-                            <tr style="background-color:#F3F4F6; color:#1E5A34;">
-                                <th style="border:1px solid #1E5A34; padding:8px; width:15%; text-align:center;">ESTATUS</th>
-                                <th style="border:1px solid #1E5A34; padding:8px; text-align:left;">RECAUDO CONTABLE OBLIGATORIO</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                """
-                for lbl, k in RECAUDOS_GLOBAL:
-                    html_rep_inf += f"""
-                            <tr>
-                                <td style="border:1px solid #D1D5DB; padding:8px; text-align:center; font-weight:bold; color:{"#1E5A34" if reg_sel.get('Soportes', {}).get(k) else "#D32F2F"}; font-size:16px;">{"✓" if reg_sel.get('Soportes', {}).get(k) else "X"}</td>
-                                <td style="border:1px solid #D1D5DB; padding:8px; color:#111827; font-size:13px;">{lbl}</td>
-                            </tr>
-                    """
-                html_rep_inf += f"""
-                        </tbody>
-                    </table>
-                    <table style="width:100%; margin-top:50px; border-collapse:collapse;">
-                        <tr>
-                            <td style="width:45%; vertical-align:top; font-size:12px; font-family:monospace; color:#4B5563;">
-                                Registrado por: <b>{reg_sel['Elaborado Por']}</b><br/>
-                                Firma Analista: _____________________<br/>
-                                Fecha/Hora: {reg_sel['Fecha/Hora']}
-                            </td>
-                            <td style="width:10%;"></td>
-                            <td style="width:45%; vertical-align:top; font-size:12px; font-family:monospace; color:#4B5563; text-align:right;">
-                                <br/>
-                                Aprobado por: _____________________<br/>
-                                Firma de Gerencia de Planta
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-                """
-                st.markdown(html_rep_inf, unsafe_allow_html=True)
-                
-                try:
-                    pdf_bytes_reporte = io.BytesIO(html_rep_inf.encode('utf-8')).getvalue()
-                    st.download_button("📥 DESCARGAR REPORTE FISCAL DE PROVEEDOR (.PDF)", data=pdf_bytes_reporte, file_name=f"FITCA_CHECKLIST_{codigo_sel}.pdf", mime="application/pdf", use_container_width=True, key="download_pdf_report_btn_fixed")
-                except Exception:
-                    pass
-        else:
-            st.info("📭 Base de datos vacía.")
-
-    elif opcion_menu == "📊 Bitácora de Auditoría":
-        st.title("📊 Traza e Indicadores de Auditoría (SGP)")
-        if u_info["rol"] == "Contabilidad":
-            try:
-                if len(st.session_state.get("bitacora_db", [])) > 0:
-                    df_m = pd.DataFrame(st.session_state["bitacora_db"])
-                    b1, b2 = st.columns(2)
-                    b1.metric("📁 TOTAL EXPEDIENTES PROCESADOS", len(df_m))
-                    b2.metric("🟢 CERTIFICACIONES EMITIDAS", len(df_m[df_m["Estatus"]=="Aprobado"]))
-                    st.write("---")
-                    st.dataframe(df_m[["Fecha/Hora", "Código", "Proveedor", "Rif_Prov", "Estatus", "Elaborado Por"]], use_container_width=True, hide_index=True)
-                else:
-                    st.info("📭 Vacía.")
-            except Exception as e_bitacora:
-                st.error(f"🛡️ Capa de Protección de Bitácora activada: {str(e_bitacora)}")
-        else:
-            st.error("🔒 ACCESO RESTRINGIDO: Este módulo requiere nivel de acceso de Supervisor Contable.")
-
-st.markdown("<style>div[data-testid='stSelectbox'] { width: 100% !important; }</style>", unsafe_allow_html=True)
-
-try:
-    host_verificador = os.environ.get("HOSTNAME", "FITCA_MAIN_SERVER")
-    token_autenticidad = base64.b64encode(host_verificador.encode()).decode()
-    if not token_autenticidad:
-        st.error("🔒 VIOLACIÓN DE LICENCIA: Intento de clonación detectado. Aplicación bloqueada.")
-        st.stop()
-except Exception:
-    pass
-# =========================================================================
-# 🛡️ CAPA TERMINAL DE REDIRECCIÓN Y BLINDAJE DE RENDERIZADO FISCAL v5.0
-# =========================================================================
-if st.session_state.get("mostrar_botones_cierre") and st.session_state.get("reporte_html_temp"):
-    st.write("---")
-    st.markdown(st.session_state["reporte_html_temp"], unsafe_allow_html=True)
-    pdf_bytes_cierre_real = io.BytesIO(st.session_state["reporte_html_temp"].encode('utf-8')).getvalue()
-    st.download_button("📥 DESCARGAR COMPROBANTE FISCAL COMPLETADO (.PDF)", data=pdf_bytes_cierre_real, file_name=f"FITCA_V5_{st.session_state.get('codigo_temp', 'REG')}.pdf", mime="application/pdf", use_container_width=True, key="btn_download_cierre_blindado_v5")
-        if "opcion_menu" in locals() and opcion_menu == "📊 Informes" and "reg_sel" in locals() and reg_sel:
-        try:
-            st.write("---")
-            st.write("##### 📄 Planilla Calcada de Formato de Planta (Modelo Termo Servicios)")
-            s_map_v5 = reg_sel.get('Soportes', {})
-            
-            # 🏢 INTERRUPTOR MÁSTER: Carga el logo desde la base de datos, o usa el membrete oficial de respaldo
-            logo_html_tag_v5 = ""
-            if "empresa_db" in st.session_state and st.session_state["empresa_db"].get("logo_bytes"):
-                try:
-                    encoded_logo_v5 = base64.b64encode(st.session_state["empresa_db"]["logo_bytes"]).decode()
-                    logo_html_tag_v5 = f'<img src="data:image/png;base64,{encoded_logo_v5}" style="max-height:55px; float:left; margin-right:15px;"/>'
-                except Exception:
-                    logo_html_tag_v5 = '<span style="font-size:24px; float:left; margin-right:10px;">🏢</span>'
-            else:
-                logo_html_tag_v5 = '<span style="font-size:24px; float:left; margin-right:10px;">🏢</span>'
-
-            # Estructuración rígida idéntica al formato físico de la planta Turmero
-            html_informe_final = f"""
-            <div style="background-color:#FFFFFF; padding:35px; border:2px solid #1E5A34; max-width:750px; margin:10px auto; color:#000000; font-family:Arial, sans-serif;">
-                <div style="width:100%; border-bottom:3px solid #1E5A34; padding-bottom:10px; margin-bottom:20px; overflow:hidden;">
-                    {logo_html_tag_v5}
-                    <h2 style="color:#1E5A34; margin:0; font-size:22px; font-weight:bold; letter-spacing:-0.5px;">FRIGORÍFICO INDUSTRIAL TURMERO C.A.</h2>
-                    <p style="margin:2px 0 0 0; font-size:11px; color:#4B5563; font-family:monospace;">Carne de excelente calidad a precio justo...</p>
-                </div>
-                
-                <h4 style="text-align:center; font-weight:bold; text-transform:uppercase; margin-top:25px; margin-bottom:25px; font-size:14px; letter-spacing:0.5px; color:#111827;">PLANILLA DE RECAUDOS PARA LA CREACIÓN O REGISTRO DEL PROVEEDORES</h4>
-                
-                <div style="background-color:#F9FAFB; padding:15px; border:1px solid #E5E7EB; border-radius:4px; font-size:13px; line-height:1.6; margin-bottom:25px;">
-                    <b>Nombre del Proveedor:</b> {reg_sel['Proveedor']}<br/>
-                    <b>Código del Proveedor:</b> {reg_sel['Código']}<br/>
-                    <b>RIF Comercial:</b> {reg_sel['Rif_Prov']}<br/>
-                    <b>Calificación Fiscal:</b> {reg_sel.get('Contribuyente', 'Sujeto Pasivo Especial')} (IVA: {reg_sel.get('Ret_Iva', '75%')} / ISLR: {reg_sel.get('Ret_Islr', '2.0%')})
-                </div>
-                
-                <table style="width:100%; border-collapse:collapse; margin-top:15px; font-size:12px;">
-                    <thead>
-                        <tr style="background-color:#1E5A34; color:#FFFFFF; text-transform:uppercase; font-size:11px;">
-                            <th style="border:1px solid #1E5A34; padding:8px; width:12%; text-align:center;">ESTATUS</th>
-                            <th style="border:1px solid #1E5A34; padding:8px; text-align:left;">RECAUDO CONTABLE OBLIGATORIO</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            """
-            for lbl, k in RECAUDOS_GLOBAL:
-                html_informe_final += f"""
-                        <tr>
-                            <td style="border:1px solid #D1D5DB; padding:7px; text-align:center; font-weight:bold; color:{"#1E5A34" if s_map_v5.get(k) else "#D32F2F"}; font-size:14px; background-color:{"#F3FBF7" if s_map_v5.get(k) else "#FFF5F5"};">{"✓" if s_map_v5.get(k) else "X"}</td>
-                            <td style="border:1px solid #D1D5DB; padding:7px; color:#111827;">{lbl}</td>
-                        </tr>
-                """
-            html_informe_final += f"""
-                    </tbody>
-                </table>
-                
-                <table style="width:100%; margin-top:60px; border-collapse:collapse; font-size:11px; font-family:monospace; color:#4B5563;">
-                    <tr>
-                        <td style="width:45%; vertical-align:top; border-top:1px solid #9CA3AF; padding-top:8px;">
-                            Registrado por: <br/>
-                            <b>{reg_sel['Elaborado Por']}</b><br/>
-                            Firma Analista: _____________________<br/>
-                            Fecha/Hora: {reg_sel['Fecha/Hora']}
-                        </td>
-                        <td style="width:10%;"></td>
-                        <td style="width:45%; vertical-align:top; border-top:1px solid #9CA3AF; padding-top:8px; text-align:right;">
-                            Aprobado por: <br/>
-                            <br/>
-                            Firma de Gerencia de Planta: _____________________
-                        </td>
-                    </tr>
-                </table>
-            </div>
-            """
-            # Renderizado nativo forzado directo en el monitor de informes
-            st.markdown(html_informe_final, unsafe_allow_html=True)
-            
-            # Descarga de PDF real binario engranada al ras
-            pdf_bytes_informe_final = io.BytesIO(html_informe_final.encode('utf-8')).getvalue()
-            st.download_button("📥 DESCARGAR PLANILLA EN LIMPIO DE PROVEEDOR (.PDF)", data=pdf_bytes_informe_final, file_name=f"FITCA_CHECKLIST_{reg_sel['Código']}.pdf", mime="application/pdf", use_container_width=True, key="btn_download_informe_blindado_v5")
-        except Exception as e_render:
-            st.error(f"🛡️ Capa de protección activada: {str(e_render)}")
-
