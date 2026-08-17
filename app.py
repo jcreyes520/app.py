@@ -23,7 +23,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 📑 LISTA MAESTRA DE LAS 27 ENTIDADES BANCARIAS VENEZOLANAS REALES VIGENTES
+# 📑 LISTAS MAESTRAS CONTABLES
 BCOS_LISTA_REAL = [
     "0102 - Banco de Venezuela (BDV)", "0163 - Banco del Tesoro", "0175 - Banco Digital de los Trabajadores (BDT)",
     "0177 - Banco de la Fuerza Armada National Bolivariana (BANFANB)", "0166 - Banco Agrícola de Venezuela",
@@ -35,7 +35,6 @@ BCOS_LISTA_REAL = [
     "0182 - N58 Banco Digital", "Otros (Internacional / Cuenta Extranjera)"
 ]
 
-# 📑 LISTA MAESTRA DE LOS 12 RECAUDOS EXHAUSTIVOS DE LA PLANILLA FISCAL REAL DE PLANTA
 RECAUDOS_GLOBAL = [
     ("Copia del Registro Mercantil", "mer"), ("Copia del Registro de Información Fiscal (RIF)", "rif"),
     ("Copia de la Cédula de Identidad del Accionista", "ced"), ("Licencia de Actividades Económicas", "lic"),
@@ -118,6 +117,13 @@ else:
             n_rol = st.selectbox("Nivel de Acceso Contable / Rol:", ["Compras", "Contabilidad"])
         with cu2:
             n_ape = st.text_input("Apellido del Funcionario:", placeholder="Ej: Rojas")
+            n_clv = st.text_input("Clave de Acceso Secreta:", type="password", placeholder="••••••••")
+        if st.button("➕ Autorizar y Grabar Nuevo Analista", use_container_width=True):
+            if n_nom and n_ape and n_usr and n_clv:
+                st.session_state["usuarios_db"].append({"nombre": n_nom, "apellido": n_ape, "usuario": n_usr, "clave": n_clv, "rol": n_rol})
+                st.success(f"✅ Analista '{n_nom} {n_ape}' autorizado con éxito."); st.rerun()
+            else: st.error("❌ ERROR: Complete todos los campos de usuario.")
+
     elif opcion_menu == "Planilla de Solicitudes":
         st.write("#### 📝 PLANILLA DE REGISTRO PREVIO (ENTRADA DE DATOS)")
         accion_planilla = st.radio("Operación Contable:", ["➕ Registrar Nuevo Proveedor", "✏️ Modificar / Actualizar Proveedor Existente"], horizontal=True)
@@ -129,14 +135,10 @@ else:
             df_provs_mod = pd.DataFrame(st.session_state["bitacora_db"])
             list_mod_opts = df_provs_mod.apply(lambda row: f"{row['Código']} - {row['Proveedor']}", axis=1).tolist()
             selected_mod_prov = st.selectbox("🔍 Seleccione el Expediente del Proveedor:", list_mod_opts)
-            
             try:
-                if selected_mod_prov and " - " in selected_mod_prov:
-                    codigo_a_buscar = int(selected_mod_prov.split(" - ")[0].strip())
-                else:
-                    codigo_a_buscar = None
-            except Exception:
-                codigo_a_buscar = None
+                if selected_mod_prov and " - " in selected_mod_prov: codigo_a_buscar = int(selected_mod_prov.split(" - ").strip())
+                else: codigo_a_buscar = None
+            except Exception: codigo_a_buscar = None
 
             if codigo_a_buscar is not None:
                 match = next((idx for idx, item in enumerate(st.session_state["bitacora_db"]) if item["Código"] == codigo_a_buscar), None)
@@ -149,14 +151,14 @@ else:
         c_bas1, c_bas2, c_bas3, c_bas4 = st.columns(4)
         with c_bas1: c_prov = st.number_input("Código Maestro Proveedor Interno:", value=int(val_codigo), step=1)
         with c_bas2: n_prov = st.text_input("Nombre o Razón Social Comercial Completa:", value=val_nombre, placeholder="Nombre de la Empresa C.A.")
-        with c_bas3: r_prov = st.text_input("Número de RIF Comercial (Ej: J-000151989):", value=val_rif, placeholder="J-00015198-9")
-        with c_bas4: tipo_prov = st.selectbox("Tipo de Proveedor (Clasificación Gasto):", ["Compras de Inventario / Materia Prima", "Servicios (Contratistas, Mantenimiento, Fletes)"], index=0 if val_tipo == "Compras de Inventario / Materia Prima" else 1)
+        with c_bas3: r_prov = st.text_input("Número de RIF Comercial:", value=val_rif, placeholder="J-00015198-9")
+        with c_bas4: tipo_prov = st.selectbox("Tipo de Proveedor:", ["Compras de Inventario / Materia Prima", "Servicios (Contratistas, Mantenimiento, Fletes)"], index=0 if val_tipo == "Compras de Inventario / Materia Prima" else 1)
 
         st.write("##### 2. Información de Contacto Operativo")
         t_prov = st.text_input("Teléfono Obligatorio de Planta:", value=val_telefono, placeholder="0244-XXXXXXX")
-        p_cont = st.text_input("Persona / Contacto de Ventas Autorizado:", value=val_contacto, placeholder="Contacto")
-        e_prov = st.text_input("Correo Electrónico / Mail de Operaciones:", value=val_correo, placeholder="correo@proveedor.com")
-        tipo_sujeto_sel = st.selectbox("Calificación Fiscal del Contribuyente:", ["Sujeto Pasivo Especial (Especial)", "Contribuyente Ordinario"])
+        p_cont = st.text_input("Persona / Contacto Autorizado:", value=val_contacto, placeholder="Contacto")
+        e_prov = st.text_input("Correo Electrónico de Operaciones:", value=val_correo, placeholder="correo@proveedor.com")
+        tipo_sujeto_sel = st.selectbox("Calificación Fiscal:", ["Sujeto Pasivo Especial (Especial)", "Contribuyente Ordinario"])
 
         st.write("##### 3. Gestión Multi-Cuenta Financiera (Hasta 3 Canales de Transferencia)")
         st.markdown("**[CANAL BANCARIO N° 1 - Principal Obligatorio]**")
@@ -165,35 +167,31 @@ else:
         with cb1_2: ben_1 = st.text_input("Nombre Beneficiario Pago (C1):", value=val_cuentas.get("c1_ben") if val_cuentas.get("c1_ben") else val_nombre, key="ben1")
         with cb1_3: t_ben_1 = st.selectbox("Tipo Documento (C1):", ["Empresa (RIF)", "Persona Natural (Cédula)"], index=0 if val_cuentas.get("c1_tipo") == "Empresa (RIF)" else 1, key="t_ben1")
         with cb1_4:
-            if t_ben_1 == "Persona Natural (Cédula)": doc_1 = st.text_input("Cédula de Identidad del Beneficiario (C1):", value=val_cuentas.get("c1_doc"), placeholder="Ej: V-12345678", key="doc1")
+            if t_ben_1 == "Persona Natural (Cédula)": doc_1 = st.text_input("Cédula del Beneficiario (C1):", value=val_cuentas.get("c1_doc"), key="doc1")
             else: doc_1 = st.text_input("RIF Cuenta Beneficiario (C1):", value=r_prov if r_prov else val_cuentas.get("c1_doc"), key="doc1")
         n_cta_1 = st.text_input("N° Cuenta Nacional - 20 dígitos (C1):", value=val_cuentas.get("c1_num"), max_chars=20, key="n_cta1")
 
         st.write("---")
-        activar_c2 = st.checkbox("➕ ¿Registrar Canal Bancario Adicional N° 2 para este Proveedor?", value=True if val_cuentas.get("c2_num") else False, key="chk_act_c2")
+        activar_c2 = st.checkbox("➕ ¿Registrar Canal Bancario Adicional N° 2?", value=True if val_cuentas.get("c2_num") else False, key="chk_act_c2")
         bco_2, ben_2, t_ben_2, doc_2, n_cta_2 = "Otros", "", "Empresa (RIF)", "", ""
         if activar_c2:
             st.markdown("**[CANAL BANCARIO N° 2 Opcional]**")
             cb2_1, cb2_2, cb2_3, cb2_4 = st.columns([1, 1, 0.8, 1.2])
             with cb2_1: bco_2 = st.selectbox("Banco Destino (C2):", BCOS_LISTA_REAL, index=BCOS_LISTA_REAL.index(val_cuentas.get("c2_bco")) if val_cuentas.get("c2_bco") in BCOS_LISTA_REAL else 0, key="bco2")
-            with cb2_2: ben_2 = st.text_input("Nombre Beneficiario Pago (C2):", value=val_cuentas.get("c2_ben"), key="ben2")
+            with cb2_2: ben_2 = st.text_input("Nombre Beneficiario (C2):", value=val_cuentas.get("c2_ben"), key="ben2")
             with cb2_3: t_ben_2 = st.selectbox("Tipo Documento (C2):", ["Empresa (RIF)", "Persona Natural (Cédula)"], index=0 if val_cuentas.get("c2_tipo") == "Empresa (RIF)" else 1, key="t_ben2")
-            with cb2_4:
-                if t_ben_2 == "Persona Natural (Cédula)": doc_2 = st.text_input("Cédula de Identidad del Beneficiario (C2):", value=val_cuentas.get("c2_doc"), key="doc2")
-                else: doc_2 = st.text_input("RIF Cuenta Beneficiario (C2):", value=val_cuentas.get("c2_doc"), key="doc2")
+            with cb2_4: doc_2 = st.text_input("Documento Identidad (C2):", value=val_cuentas.get("c2_doc"), key="doc2")
             n_cta_2 = st.text_input("N° Cuenta Nacional - 20 dígitos (C2):", value=val_cuentas.get("c2_num"), max_chars=20, key="n_cta2")
 
-        activar_c3 = st.checkbox("➕ ¿Registrar Canal Bancario Adicional N° 3 para este Proveedor?", value=True if val_cuentas.get("c3_num") else False, key="chk_act_c3")
+        activar_c3 = st.checkbox("➕ ¿Registrar Canal Bancario Adicional N° 3?", value=True if val_cuentas.get("c3_num") else False, key="chk_act_c3")
         bco_3, ben_3, t_ben_3, doc_3, n_cta_20_3 = "Otros", "", "Empresa (RIF)", "", ""
         if activar_c3:
             st.markdown("**[CANAL BANCARIO N° 3 Opcional]**")
             cb3_1, cb3_2, cb3_3, cb3_4 = st.columns([1, 1, 0.8, 1.2])
             with cb3_1: bco_3 = st.selectbox("Banco Destino (C3):", BCOS_LISTA_REAL, index=BCOS_LISTA_REAL.index(val_cuentas.get("c3_bco")) if val_cuentas.get("c3_bco") in BCOS_LISTA_REAL else 0, key="bco3")
-            with cb3_2: ben_3 = st.text_input("Nombre Beneficiario Pago (C3):", value=val_cuentas.get("c3_ben"), key="ben3")
+            with cb3_2: ben_3 = st.text_input("Nombre Beneficiario (C3):", value=val_cuentas.get("c3_ben"), key="ben3")
             with cb3_3: t_ben_3 = st.selectbox("Tipo Documento (C3):", ["Empresa (RIF)", "Persona Natural (Cédula)"], index=0 if val_cuentas.get("c3_tipo") == "Empresa (RIF)" else 1, key="t_ben3")
-            with cb3_4:
-                if t_ben_3 == "Persona Natural (Cédula)": doc_3 = st.text_input("Cédula de Identidad del Beneficiario (C3):", value=val_cuentas.get("c3_doc"), key="doc3")
-                else: doc_3 = st.text_input("RIF Cuenta Beneficiario (C3):", value=val_cuentas.get("c3_doc"), key="doc3")
+            with cb3_4: doc_3 = st.text_input("Documento Identidad (C3):", value=val_cuentas.get("c3_doc"), key="doc3")
             n_cta_20_3 = st.text_input("N° Cuenta Nacional - 20 dígitos (C3):", value=val_cuentas.get("c3_num"), max_chars=20, key="n_cta3")
 
         st.write("##### 4. Checklist Contable y Soportes para Canal Bancario N° 1 (Principal)")
@@ -219,3 +217,4 @@ else:
                 ahora_str = datetime.now().strftime("%d/%m/%Y %I:%M %p")
                 res_soportes = {k: chks[k] for k in chks}
                 txt_faltantes = ", ".join(documentos_faltantes) if documentos_faltantes else "Ninguno"
+                estatus_final = "Pendiente por Soportes" if documentos_faltantes else "Aprobado"
