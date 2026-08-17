@@ -408,4 +408,12 @@ try:
         st.stop()
 except Exception:
     pass
+# =========================================================================
+# 🛡️ CAPA TERMINAL DE REDIRECCIÓN Y BLINDAJE DE RENDERIZADO FISCAL v5.0
+# =========================================================================
+if st.session_state.get("mostrar_botones_cierre") and st.session_state.get("reporte_html_temp"):
+    st.write("---")
+    st.markdown(st.session_state["reporte_html_temp"], unsafe_allow_html=True)
+    pdf_bytes_cierre_real = io.BytesIO(st.session_state["reporte_html_temp"].encode('utf-8')).getvalue()
+    st.download_button("📥 DESCARGAR COMPROBANTE FISCAL COMPLETADO (.PDF)", data=pdf_bytes_cierre_real, file_name=f"FITCA_V5_{st.session_state.get('codigo_temp', 'REG')}.pdf", mime="application/pdf", use_container_width=True, key="btn_download_cierre_blindado_v5")
 
