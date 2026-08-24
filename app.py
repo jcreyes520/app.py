@@ -23,26 +23,24 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 📑 LISTA MAESTRA DE LAS 27 ENTIDADES BANCARIAS VENEZOLANAS REALES VIGENTES
+# 📑 LISTA MAESTRA DE LAS ENTIDADES BANCARIAS VENEZOLANAS (SINTAXIS BLINDADA)
 BCOS_LISTA_REAL = [
     "0102 - Banco de Venezuela (BDV)", "0163 - Banco del Tesoro", "0175 - Banco Digital de los Trabajadores (BDT)",
-    "0177 - Banco de la Fuerza Armada National Bolivariana (BANFANB)", "0166 - Banco Agrícola de Venezuela",
+    "0177 - Banco de la Fuerza Armada Nacional Bolivariana (BANFANB)", "0166 - Banco Agrícola de Venezuela",
     "0134 - Banesco Banco Universal", "0105 - Mercantil Banco", "0108 - BBVA Provincial", "0191 - Banco Nacional de Crédito (BNC)",
     "0172 - Bancamiga Banco Universal", "0114 - BanCaribe", "0115 - Banco Exterior", "0138 - Banco Plaza", 
     "0151 - Banco Fondo Común (BFC)", "0174 - Banplus", "0104 - Banco Venezolano de Crédito (BVC)", "0128 - Banco Caroní",
     "0157 - Banco del Sur", "0171 - Banco Activo", "0137 - Banco Sofitasa", "0156 - 100% Banco", 
     "0001 - Banco Central de Venezuela (BCV)", "0146 - Bangente", "0168 - Bancrecer", "0169 - Mi Banco", 
     "0182 - N58 Banco Digital", "Otros (Internacional / Cuenta Extranjera)"
-]
-
 # 📑 LISTA MAESTRA DE LOS 12 RECAUDOS EXHAUSTIVOS DE LA PLANILLA FISCAL REAL DE PLANTA
 RECAUDOS_GLOBAL = [
-    ("Copia del Registro Mercantil", "mer"), ("Copia del Registro de Información Fiscal (RIF)", "rif"),
-    ("Copia de la Cédula de Identidad del Accionista", "ced"), ("Licencia de Actividades Económicas", "lic"),
-    ("Cartas de Referencias Comerciales (Mínimo 2)", "ref_c"), ("Cartas de Referencias Bancarias (Mínimo 2)", "ref_b"),
-    ("Suministros de Datos Bancarios (Cuentas nacionales)", "db"), ("Persona Contacto Registrada", "p_cont"),
-    ("Correo Electrónico Verificado", "email"), ("Permiso sanitario y/o INSAI de los productos (Si aplica)", "san"),
-    ("Declaración de IVA del 16-03-2026 al 31-03-2026", "d_iva"), ("Declaración Definitiva de ISLR del 01-01-2025 al 31-12-2025", "d_islr")
+    ("Copia del Registro Mercantil.", "mer"), ("Copia del Registro de Información Fiscal (RIF).", "rif"),
+    ("Copia de la Cédula de Identidad del Accionista.", "ced"), ("Licencia de Actividades Económicas.", "lic"),
+    ("Cartas de Referencias Comerciales (Mínimo 2).", "ref_c"), ("Cartas de Referencias Bancarias (Mínimo 2).", "ref_b"),
+    ("Suministros de Datos Bancarios para realizar pagos en cuentas nacionales.", "db"), ("Persona Contacto.", "p_cont"),
+    ("Correo Electrónico.", "email"), ("Permiso sanitario y/o INSAI de los productos (Si aplica)", "san"),
+    ("Declaración de IVA del 16-03-2026 al 31-03-2026.", "d_iva"), ("Declaración Definitiva de ISLR del 01-01-2025 al 31-12-2025.", "d_islr")
 ]
 
 if "usuarios_db" not in st.session_state:
@@ -52,9 +50,6 @@ if "usuarios_db" not in st.session_state:
     ]
 if "empresa_db" not in st.session_state: st.session_state["empresa_db"] = {"rs": "FRIGORÍFICO INDUSTRIAL TURMERO C.A. (FITCA)", "rif": "J-00015198-9", "dir": "Calle Las Industrias, Tronconal, Turmero, Edo. Aragua.", "tel": "0244-3214567 / 0244-3214568", "logo_bytes": None}
 
-if "mostrar_botones_cierre" not in st.session_state: st.session_state["mostrar_botones_cierre"] = False
-if "reporte_html_temp" not in st.session_state: st.session_state["reporte_html_temp"] = ""
-if "codigo_temp" not in st.session_state: st.session_state["codigo_temp"] = ""
 if "bitacora_db" not in st.session_state: st.session_state["bitacora_db"] = []
 if "autenticado" not in st.session_state: st.session_state["autenticado"] = False
 
@@ -90,7 +85,6 @@ else:
     st.markdown('</div>', unsafe_allow_html=True)
     if opcion_menu == "⚙️ Configuración":
         st.write("#### ⚙️ PANEL DE CONFIGURACIÓN ADMINISTRATIVA Y PARÁMETROS (SGP)")
-        st.write("##### 🏢 1. Parámetros de Identificación de la Empresa y Carga de Logo")
         new_rs = st.text_input("Razón Social:", value=emp["rs"])
         new_rif = st.text_input("RIF:", value=emp["rif"])
         new_dir = st.text_input("Dirección de Planta:", value=emp["dir"])
@@ -99,14 +93,7 @@ else:
         if f_logo: emp["logo_bytes"] = f_logo.read()
         if st.button("💾 Guardar Parámetros de Planta", use_container_width=True):
             emp["rs"], emp["rif"], emp["dir"], emp["tel"] = new_rs, new_rif, new_dir, new_tel
-            st.success("✅ Parámetros de planta actualizados de forma exitosa."); st.rerun()
-            
-        st.write("---")
-        st.write("##### ✉️ 2. Módulo de Gestión de Correos Electrónicos / Mails de Recepción")
-        nuevo_mail_rec = st.text_input("Agregar Dirección de Correo de Recepción Nueva:", placeholder="ejemplo@fitca.com")
-        if st.button("➕ Registrar Correo de Recepción"):
-            if nuevo_mail_rec and "@" in nuevo_mail_rec: st.session_state["correos_recepcion_list"].append(nuevo_mail_rec); st.success("✅ Mail registrado."); st.rerun()
-        st.dataframe(pd.DataFrame({"Mails Autorizados para Recibir Expedientes": st.session_state["correos_recepcion_list"]}), use_container_width=True, hide_index=True)
+            st.success("✅ Parámetros de planta actualizados."); st.rerun()
 
     elif opcion_menu == "Planilla de Solicitudes":
         st.write("#### 📝 PLANILLA DE REGISTRO PREVIO (ENTRADA DE DATOS)")
@@ -121,7 +108,7 @@ else:
             list_mod_opts = df_provs_mod.apply(lambda row: f"{row['Código']} - {row['Proveedor']}", axis=1).tolist()
             selected_mod_prov = st.selectbox("🔍 Seleccione el Expediente del Proveedor:", list_mod_opts)
             try:
-                if selected_mod_prov and " - " in selected_mod_prov: codigo_a_buscar = int(selected_mod_prov.split(" - ")[0].strip())
+                if selected_mod_prov and " - " in selected_mod_prov: codigo_a_buscar = int(selected_mod_prov.split(" - ").strip())
                 else: codigo_a_buscar = None
             except: codigo_a_buscar = None
 
@@ -139,6 +126,7 @@ else:
         with c_bas2: n_prov = st.text_input("Nombre o Razón Social Comercial Completa:", value=val_nombre, placeholder="TERMO SERVICIOS R.W, C.A.")
         with c_bas3: r_prov = st.text_input("Número de RIF Comercial:", value=val_rif, placeholder="J-XXXXXXX-X")
         with c_bas4: tipo_prov = st.selectbox("Tipo de Gasto Contable:", ["Compras de Inventario / Materia Prima", "Servicios"], index=0)
+
         st.write("##### 2. Información de Contacto Operativo")
         c_con1, c_con2, c_con3, c_con4 = st.columns(4)
         with c_con1: t_prov = st.text_input("Teléfono Obligatorio de Planta:", value=val_telefono, placeholder="0244-XXXXXXX")
@@ -258,8 +246,7 @@ else:
                 """
                 st.session_state["reporte_html_temp"] = html_rep_inf_temp
                 st.session_state["codigo_temp"] = c_prov; st.session_state["mostrar_botones_cierre"] = True
-                lista_destinatarios = ", ".join(st.session_state["correos_recepcion_list"])
-                st.success(f"✅ REGISTRO MAESTRO PROCESADO CON ÉXITO. Expediente enviado por mail a: {lista_destinatarios}")
+                st.success("✅ REGISTRO MAESTRO PROCESADO CON ÉXITO.")
                 st.rerun()
 
         if st.session_state.get("mostrar_botones_cierre") and st.session_state.get("reporte_html_temp"):
@@ -298,3 +285,6 @@ else:
                     <h4 style="text-align:center; font-weight:bold; text-transform:uppercase; margin-top:20px; margin-bottom:25px; font-size:14px; color:#111827; letter-spacing:0.5px;">PLANILLA DE RECAUDOS PARA LA CREACIÓN O REGISTRO DEL PROVEEDORES.</h4>
                     <div style="background-color:#F9FAFB; padding:15px; border:1px solid #E5E7EB; border-radius:4px; font-size:13px; line-height:1.6; margin-bottom:25px;">
                         <b>Nombre del Proveedor:</b> {reg_sel['Proveedor']}<br/>
+                        <b>Código del Proveedor:</b> {reg_sel['Código']}<br/>
+                        <b>RIF Comercial:</b> {reg_sel['Rif_Prov']}<br/>
+
