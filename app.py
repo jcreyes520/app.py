@@ -27,7 +27,7 @@ st.markdown("""
 BCOS_LISTA_REAL = [
     "0102 - Banco de Venezuela (BDV)", "0163 - Banco del Tesoro", "0175 - Banco Digital de los Trabajadores (BDT)",
     "0177 - Banco de la Fuerza Armada National Bolivariana (BANFANB)", "0166 - Banco Agrícola de Venezuela",
-    "0134 - Banesco Banco Universal", "0105 - Mercantil Banco", "0108 - BBVA Provincial", "0191 - Banco Nacional de Crédito (BNC)",
+    "0134 - Banesco Banco Universal", "0105 - Mercantil Banco", "0108 - BBVA Provincial", "0191 - Banco National de Crédito (BNC)",
     "0172 - Bancamiga Banco Universal", "0114 - BanCaribe", "0115 - Banco Exterior", "0138 - Banco Plaza", 
     "0151 - Banco Fondo Común (BFC)", "0174 - Banplus", "0104 - Banco Venezolano de Crédito (BVC)", "0128 - Banco Caroní",
     "0157 - Banco del Sur", "0171 - Banco Activo", "0137 - Banco Sofitasa", "0156 - 100% Banco", 
@@ -45,6 +45,7 @@ RECAUDOS_GLOBAL = [
     ("Declaración de IVA del 16-03-2026 al 31-03-2026", "d_iva"), ("Declaración Definitiva de ISLR del 01-01-2025 al 31-12-2025", "d_islr")
 ]
 
+# Inicialización segura de variables persistentes
 if "usuarios_db" not in st.session_state:
     st.session_state["usuarios_db"] = [
         {"nombre": "Juan Carlos", "apellido": "Reyes", "usuario": "supervisor", "clave": "fitca2026", "rol": "Contabilidad"},
@@ -52,9 +53,6 @@ if "usuarios_db" not in st.session_state:
     ]
 if "empresa_db" not in st.session_state: st.session_state["empresa_db"] = {"rs": "FRIGORÍFICO INDUSTRIAL TURMERO C.A. (FITCA)", "rif": "J-00015198-9", "dir": "Calle Las Industrias, Tronconal, Turmero, Edo. Aragua.", "tel": "0244-3214567 / 0244-3214568", "logo_bytes": None}
 
-if "mostrar_botones_cierre" not in st.session_state: st.session_state["mostrar_botones_cierre"] = False
-if "reporte_html_temp" not in st.session_state: st.session_state["reporte_html_temp"] = ""
-if "codigo_temp" not in st.session_state: st.session_state["codigo_temp"] = ""
 if "bitacora_db" not in st.session_state: st.session_state["bitacora_db"] = []
 if "autenticado" not in st.session_state: st.session_state["autenticado"] = False
 
@@ -180,9 +178,7 @@ else:
             with cb2_1: bco_2 = st.selectbox("Banco Destino (C2):", BCOS_LISTA_REAL, index=BCOS_LISTA_REAL.index(val_cuentas.get("c2_bco")) if val_cuentas.get("c2_bco") in BCOS_LISTA_REAL else 0, key="bco2")
             with cb2_2: ben_2 = st.text_input("Nombre Beneficiario Pago (C2):", value=val_cuentas.get("c2_ben"), key="ben2")
             with cb2_3: t_ben_2 = st.selectbox("Tipo Documento (C2):", ["Empresa (RIF)", "Persona Natural (Cédula)"], index=0 if val_cuentas.get("c2_tipo") == "Empresa (RIF)" else 1, key="t_ben2")
-            with cb2_4:
-                if t_ben_2 == "Persona Natural (Cédula)": doc_2 = st.text_input("Cédula de Identidad del Beneficiario (C2):", value=val_cuentas.get("c2_doc"), key="doc2")
-                else: doc_2 = st.text_input("RIF Cuenta Beneficiario (C2):", value=val_cuentas.get("c2_doc"), key="doc2")
+            with cb2_4: doc_2 = st.text_input("RIF/Cédula Cuenta Beneficiario (C2):", value=val_cuentas.get("c2_doc"), key="doc2")
             n_cta_2 = st.text_input("N° Cuenta Nacional - 20 dígitos (C2):", value=val_cuentas.get("c2_num"), max_chars=20, key="n_cta2")
 
         activar_c3 = st.checkbox("➕ ¿Registrar Canal Bancario Adicional N° 3 para este Proveedor?", value=True if val_cuentas.get("c3_num") else False, key="chk_act_c3")
@@ -191,134 +187,4 @@ else:
             st.markdown("**[CANAL BANCARIO N° 3 Opcional]**")
             cb3_1, cb3_2, cb3_3, cb3_4 = st.columns([1, 1, 0.8, 1.2])
             with cb3_1: bco_3 = st.selectbox("Banco Destino (C3):", BCOS_LISTA_REAL, index=BCOS_LISTA_REAL.index(val_cuentas.get("c3_bco")) if val_cuentas.get("c3_bco") in BCOS_LISTA_REAL else 0, key="bco3")
-        if st.button("⚙️ Procesar Certificación y Grabar Registro en Matriz", use_container_width=True, key="btn_grabar_matriz"):
-            n_cta_cleaned = "".join(n_cta_1.split()).replace("-", "")
-            if len(n_cta_cleaned) != 20: st.error("❌ ERROR: La cuenta 1 debe poseer exactamente 20 dígitos.")
-            else:
-                ahora_str = datetime.now().strftime("%d/%m/%Y %I:%M %p")
-                res_soportes = {k: chks[k] for k in chks}
-                txt_faltantes = ", ".join(documentos_faltantes) if documentos_faltantes else "Ninguno"
-                estatus_final = "Pendiente por Soportes" if documentos_faltantes else "Aprobado"
-                cuentas_dict = {"c1_bco": bco_1, "c1_ben": ben_1, "c1_tipo": t_ben_1, "c1_doc": doc_1, "c1_num": n_cta_cleaned, "c2_bco": bco_2, "c2_ben": ben_2, "c2_tipo": t_ben_2, "c2_doc": doc_2, "c2_num": "".join(n_cta_2.split()), "c3_bco": bco_3, "c3_ben": ben_3, "c3_tipo": t_ben_3, "c3_doc": doc_3, "c3_num": "".join(n_cta_20_3.split())}
-                ret_iva_val = "75%" if tipo_sujeto_sel == "Sujeto Pasivo Especial (Especial)" else "0%"
-                ret_islr_val = "2.0%" if tipo_sujeto_sel == "Sujeto Pasivo Especial (Especial)" else "1.0%"
-                
-                nuevo_registro = {"Fecha/Hora": ahora_str, "Código": int(c_prov), "Proveedor": n_prov.upper(), "Rif_Prov": r_prov.upper(), "Contacto": p_cont, "Correo": e_prov, "Teléfono": t_prov, "Tipo": tipo_prov, "Elaborado Por": persona_elabora, "Soportes": res_soportes, "Notas": obs_compras, "Faltantes": txt_faltantes, "Estatus": estatus_final, "Archivos": files_bytes, "Cuentas_Bancarias": cuentas_dict, "Ret_Iva": ret_iva_val, "Ret_Islr": ret_islr_val, "Contribuyente": tipo_sujeto_sel}
-                match_existente = next((idx for idx, item in enumerate(st.session_state["bitacora_db"]) if item["Código"] == int(c_prov)), None)
-                if match_existente is not None: st.session_state["bitacora_db"][match_existente] = nuevo_registro
-                else: st.session_state["bitacora_db"].append(nuevo_registro)
-
-                logo_html_tag = ""
-                if emp.get("logo_bytes"):
-                    try:
-                        encoded_logo = base64.b64encode(emp["logo_bytes"]).decode()
-                        logo_html_tag = f'<img src="data:image/png;base64,{encoded_logo}" style="max-height:55px; float:left; margin-right:15px;"/>'
-                    except Exception: logo_html_tag = '<span style="font-size:24px; float:left; margin-right:10px;">🏢</span>'
-                else: logo_html_tag = '<span style="font-size:24px; float:left; margin-right:10px;">🏢</span>'
-
-                html_rep_inf_temp = f"""
-                <div style="background-color:#FFFFFF; padding:35px; border:2px solid #1E5A34; max-width:750px; margin:10px auto; color:#000000; font-family:Arial, sans-serif;">
-                    <div style="width:100%; border-bottom:3px solid #1E5A34; padding-bottom:10px; margin-bottom:20px; overflow:hidden;">
-                        {logo_html_tag}
-                        <h2 style="color:#1E5A34; margin:0; font-size:22px; font-weight:bold; letter-spacing:-0.5px;">FRIGORÍFICO INDUSTRIAL TURMERO C.A.</h2>
-                        <p style="margin:2px 0 0 0; font-size:11px; color:#4B5563; font-family:monospace;">Carne de excelente calidad a precio justo...</p>
-                    </div>
-                    <h4 style="text-align:center; font-weight:bold; text-transform:uppercase; margin-top:25px; margin-bottom:25px; font-size:14px; color:#111827;">PLANILLA DE RECAUDOS PARA LA CREACIÓN O REGISTRO DEL PROVEEDOR</h4>
-                    <div style="background-color:#F9FAFB; padding:15px; border:1px solid #E5E7EB; border-radius:4px; font-size:13px; line-height:1.6; margin-bottom:25px;">
-                        <b>Nombre del Proveedor:</b> {n_prov.upper()}<br/>
-                        <b>Código del Proveedor:</b> {c_prov}<br/>
-                        <b>RIF Comercial:</b> {r_prov.upper()}<br/>
-                        <b>Calificación Fiscal:</b> {tipo_sujeto_sel} (IVA: {ret_iva_val} / ISLR: {ret_islr_val})
-                    </div>
-                    <table style="width:100%; border-collapse:collapse; margin-top:15px; font-size:12px;">
-                        <thead>
-                            <tr style="background-color:#1E5A34; color:#FFFFFF; text-transform:uppercase; font-size:11px;">
-                                <th style="border:1px solid #1E5A34; padding:8px; width:12%; text-align:center;">ESTATUS</th>
-                                <th style="border:1px solid #1E5A34; padding:8px; text-align:left;">RECAUDO CONTABLE OBLIGATORIO</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                """
-                for lbl, k in RECAUDOS_GLOBAL:
-                    marca_status = ""
-                    if res_soportes.get(k):
-                        marca_status = "✓" if k == "d_iva" else "X"
-                    html_rep_inf_temp += f"""
-                            <tr>
-                                <td style="border:1px solid #D1D5DB; padding:7px; text-align:center; font-weight:bold; color:{"#1E5A34" if res_soportes.get(k) and k=='d_iva' else "#000000"}; background-color:{"#F3FBF7" if res_soportes.get(k) else "#FFFFFF"}; font-size:14px;">{marca_status}</td>
-                                <td style="border:1px solid #D1D5DB; padding:7px; color:#111827;">{lbl}</td>
-                            </tr>
-                    """
-                html_rep_inf_temp += f"""
-                        </tbody>
-                    </table>
-                    <table style="width:100%; margin-top:60px; border-collapse:collapse; font-size:11px; font-family:monospace; color:#4B5563;">
-                        <tr>
-                            <td style="width:45%; vertical-align:top; border-top:1px solid #9CA3AF; padding-top:8px;">
-                                Registrado por: <br/>
-                                <b>{persona_elabora}</b><br/>
-                                Firma Analista: _____________________<br/>
-                                Fecha/Hora: {ahora_str}
-                            </td>
-                            <td style="width:10%;"></td>
-                            <td style="width:45%; vertical-align:top; border-top:1px solid #9CA3AF; padding-top:8px; text-align:right;">
-                                Aprobado por: <br/>
-                                <br/>
-                                Firma de Gerencia de Planta: _____________________
-                            </td>
-                        </tr>
-                    </table>
-                </div>
-                """
-                st.session_state["reporte_html_temp"] = html_rep_inf_temp
-                st.session_state["codigo_temp"] = c_prov; st.session_state["mostrar_botones_cierre"] = True
-                lista_destinatarios = ", ".join(st.session_state["correos_recepcion_list"])
-                st.success(f"✅ REGISTRO MAESTRO PROCESADO CON ÉXITO. Expediente enviado por mail a: {lista_destinatarios}")
-
-        if st.session_state.get("mostrar_botones_cierre") and st.session_state.get("reporte_html_temp"):
-            st.write("---")
-            st.markdown(st.session_state["reporte_html_temp"], unsafe_allow_html=True)
-            c_bl1, c_b2 = st.columns(2)
-            pdf_bytes_reporte_directo = io.BytesIO(st.session_state["reporte_html_temp"].encode('utf-8')).getvalue()
-            c_bl1.download_button("📥 DESCARGAR COMPROBANTE FISCAL COMPLETADO (.PDF)", data=pdf_bytes_reporte_directo, file_name=f"FITCA_V5_{st.session_state['codigo_temp']}.pdf", mime="application/pdf", use_container_width=True, key="dl_directa_v5")
-            if c_b2.button("🖨️ EMITIR IMPRESIÓN FÍSICA DIRECTA", use_container_width=True, key="print_direct_final_btn"): st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
-
-    elif opcion_menu == "📊 Informes":
-        st.write("#### 📊 CONSULTA DE REPORTES Y AUDITORÍA INTEGRAL")
-        if len(st.session_state.get("bitacora_db", [])) > 0:
-            df_provs = pd.DataFrame(st.session_state["bitacora_db"])
-            st.dataframe(df_provs[["Código", "Proveedor", "Rif_Prov", "Faltantes", "Estatus"]], use_container_width=True, hide_index=True)
-            list_options = df_provs.apply(lambda row: f"{row['Código']} - {row['Proveedor']}", axis=1).tolist()
-            selected_prov = st.selectbox("📋 Historial Multi-Cuenta Técnico:", list_options, key="select_prov_informe")
-            codigo_sel = int(selected_prov.split(" - ").strip()) if selected_prov else None
-            reg_sel = next((item for item in st.session_state["bitacora_db"] if item["Código"] == codigo_sel), None) if codigo_sel else None
-
-            if reg_sel:
-                st.markdown(f"**Proveedor:** {reg_sel['Proveedor']} | **RIF:** {reg_sel['Rif_Prov']} | **Clasificación Contable:** `{reg_sel.get('Tipo')}` | **Calificación SENIAT:** `{reg_sel.get('Contribuyente')}` (IVA: {reg_sel.get('Ret_Iva')} / ISLR: {reg_sel.get('Ret_Islr')})")
-                c_maps = reg_sel.get('Cuentas_Bancarias', {})
-                st.markdown(f"**C1 Principal:** Banco: {c_maps.get('c1_bco')} | Beneficiario: {c_maps.get('c1_ben')} | N° Cuenta: `{c_maps.get('c1_num')}`")
-                if c_maps.get('c2_num'): st.markdown(f"**C2 Opcional:** Banco: {c_maps.get('c2_bco')} | N° Cuenta: `{c_maps.get('c2_num')}`")
-                if c_maps.get('c3_num'): st.markdown(f"**C3 Opcional:** Banco: {c_maps.get('c3_bco')} | N° Cuenta: `{c_maps.get('c3_num')}`")
-                st.markdown(f"""<div style="background-color:#FFEBEE; padding:12px; border-left:5px solid #D32F2F; color:#C62828; font-family:monospace;">⚠️ <b>RECAUDOS PENDIENTES AUDITORÍA FITCA:</b> {reg_sel['Faltantes']}</div>""", unsafe_allow_html=True)
-
-                st.write("##### 📂 Descarga Directa de Recaudos Digitalizados:")
-                f_col1, f_col2 = st.columns(2)
-# =========================================================================
-# 🏛️ MATRIZ DE PERSISTENCIA DE DATOS DE PLANTA CONTABLE - FITCA v5.1
-# =========================================================================
-if "bitacora_db" not in st.session_state:
-    st.session_state["bitacora_db"] = []
-
-# Función máster para asentar registros sin pérdida de memoria por Rerun
-def guardar_proveedor_permanente(nuevo_registro):
-    # Evita duplicados por re-ejecución del botón
-    match_existente = next((idx for idx, item in enumerate(st.session_state["bitacora_db"]) if item["Código"] == nuevo_registro["Código"]), None)
-    if match_existente is not None:
-        st.session_state["bitacora_db"][match_existente] = nuevo_registro
-    else:
-        st.session_state["bitacora_db"].append(nuevo_registro)
-    
-    # Sella el reporte en caché temporal para que no se borre de la vista inmediata
-    st.session_state["reporte_html_temp"] = html_rep_inf_temp
-    st.session_state["codigo_temp"] = nuevo_registro["Código"]
-    st.session_state["mostrar_botones_cierre"] = True
+            with cb3_2: ben_3 = st.text_input("Nombre Beneficiario Pago (C3):", value=val_cuentas.get("c3_ben"), key="ben3")
