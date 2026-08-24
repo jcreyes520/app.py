@@ -136,7 +136,7 @@ else:
             list_mod_opts = df_provs_mod.apply(lambda row: f"{row['Código']} - {row['Proveedor']}", axis=1).tolist()
             selected_mod_prov = st.selectbox("🔍 Seleccione el Expediente del Proveedor:", list_mod_opts)
             try:
-                if selected_mod_prov and " - " in selected_mod_prov: codigo_a_buscar = int(selected_mod_prov.split(" - ").strip())
+                if selected_mod_prov and " - " in selected_mod_prov: codigo_a_buscar = int(selected_mod_prov.split(" - ")[0].strip())
                 else: codigo_a_buscar = None
             except Exception: codigo_a_buscar = None
 
