@@ -303,3 +303,22 @@ else:
 
                 st.write("##### 📂 Descarga Directa de Recaudos Digitalizados:")
                 f_col1, f_col2 = st.columns(2)
+# =========================================================================
+# 🏛️ MATRIZ DE PERSISTENCIA DE DATOS DE PLANTA CONTABLE - FITCA v5.1
+# =========================================================================
+if "bitacora_db" not in st.session_state:
+    st.session_state["bitacora_db"] = []
+
+# Función máster para asentar registros sin pérdida de memoria por Rerun
+def guardar_proveedor_permanente(nuevo_registro):
+    # Evita duplicados por re-ejecución del botón
+    match_existente = next((idx for idx, item in enumerate(st.session_state["bitacora_db"]) if item["Código"] == nuevo_registro["Código"]), None)
+    if match_existente is not None:
+        st.session_state["bitacora_db"][match_existente] = nuevo_registro
+    else:
+        st.session_state["bitacora_db"].append(nuevo_registro)
+    
+    # Sella el reporte en caché temporal para que no se borre de la vista inmediata
+    st.session_state["reporte_html_temp"] = html_rep_inf_temp
+    st.session_state["codigo_temp"] = nuevo_registro["Código"]
+    st.session_state["mostrar_botones_cierre"] = True
