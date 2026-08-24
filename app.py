@@ -23,7 +23,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# 📑 LISTA MAESTRA DE LAS ENTIDADES BANCARIAS VENEZOLANAS CON SINTAXIS REVISADA
+# 📑 LISTA MAESTRA DE LAS ENTIDADES BANCARIAS VENEZOLANAS CON SINTAXIS BLINDADA
 BCOS_LISTA_REAL = [
     "0102 - Banco de Venezuela (BDV)", "0163 - Banco del Tesoro", "0175 - Banco Digital de los Trabajadores (BDT)",
     "0177 - Banco de la Fuerza Armada Nacional Bolivariana (BANFANB)", "0166 - Banco Agrícola de Venezuela",
@@ -35,7 +35,7 @@ BCOS_LISTA_REAL = [
     "0182 - N58 Banco Digital", "Otros (Internacional / Cuenta Extranjera)"
 ]
 
-# 📑 LISTA MAESTRA DE LOS 12 RECAUDOS EXHAUSTIVOS DE LA PLANILLA FÍSICA IMPRESA
+# 📑 LISTA MAESTRA DE LOS 12 RECAUDOS EXHAUSTIVOS DE TU PLANILLA FISCAL IMPRESA RECOLECTADA
 RECAUDOS_GLOBAL = [
     ("Copia del Registro Mercantil.", "mer"), ("Copia del Registro de Información Fiscal (RIF).", "rif"),
     ("Copia de la Cédula de Identidad del Accionista.", "ced"), ("Licencia de Actividades Económicas.", "lic"),
@@ -122,43 +122,3 @@ else:
             
             if reg_sel:
                 st.markdown(f"**Proveedor:** {reg_sel['Proveedor']} | **RIF:** {reg_sel['Rif_Prov']}")
-
-        if st.session_state.get("mostrar_botones_cierre") and st.session_state.get("reporte_html_temp"):
-            st.write("---")
-            st.markdown(st.session_state["reporte_html_temp"], unsafe_allow_html=True)
-            c_bl1, c_b2 = st.columns(2)
-            pdf_bytes_reporte_directo = io.BytesIO(st.session_state["reporte_html_temp"].encode('utf-8')).getvalue()
-            c_bl1.download_button("📥 DESCARGAR COMPROBANTE DE PLANILLA (.PDF)", data=pdf_bytes_reporte_directo, file_name=f"FITCA_CHECKLIST_{st.session_state['codigo_temp']}.pdf", mime="application/pdf", use_container_width=True, key="dl_directa_v5")
-            if c_b2.button("🖨️ EMITIR IMPRESIÓN FÍSICA DIRECTA", use_container_width=True, key="print_direct_final_btn"): st.markdown("<script>window.print();</script>", unsafe_allow_html=True)
-
-    elif opcion_menu == "📊 Informes":
-        st.write("#### 📊 CONSULTA DE REPORTES Y AUDITORÍA INTEGRAL DE EXPEDIENTES")
-        if len(st.session_state.get("bitacora_db", [])) > 0:
-            df_provs = pd.DataFrame(st.session_state["bitacora_db"])
-            st.dataframe(df_provs[["Código", "Proveedor", "Rif_Prov", "Faltantes", "Estatus"]], use_container_width=True, hide_index=True)
-            list_options = df_provs.apply(lambda row: f"{row['Código']} - {row['Proveedor']}", axis=1).tolist()
-            selected_prov = st.selectbox("📋 Seleccione el Expediente a Consultar:", list_options, key="select_prov_informe")
-            codigo_sel = int(selected_prov.split(" - ").strip()) if selected_prov else None
-            reg_sel = next((item for item in st.session_state["bitacora_db"] if item["Código"] == codigo_sel), None) if codigo_sel else None
-
-            if reg_sel:
-                st.markdown(f"**Proveedor:** {reg_sel['Proveedor']} | **RIF:** {reg_sel['Rif_Prov']} | **Calificación SENIAT:** `{reg_sel.get('Contribuyente')}`")
-                c_maps = reg_sel.get('Cuentas_Bancarias', {})
-                st.markdown(f"**C1 Principal:** Banco: {c_maps.get('c1_bco')} | Beneficiario: {c_maps.get('c1_ben')} | N° Cuenta: `{c_maps.get('c1_num')}`")
-                st.markdown(f"""<div style="background-color:#FFF3CD; padding:12px; border-left:5px solid #FFA000; color:#856404; font-family:monospace; font-size:12px;">⚠️ <b>DOCUMENTOS RECAUDOS FALTANTES DETECTADOS:</b> {reg_sel['Faltantes']}</div>""", unsafe_allow_html=True)
-
-                st.write("---")
-                st.write("##### 📄 Planilla Calcada de Formato de Planta (Modelo Termo Servicios)")
-                
-                html_rep_inf = f"""
-                <div style="background-color:#FFFFFF; padding:35px; border:2px solid #1E5A34; max-width:750px; margin:10px auto; color:#000000; font-family:Arial, sans-serif;">
-                    <div style="width:100%; border-bottom:3px solid #1E5A34; padding-bottom:10px; margin-bottom:20px; text-align:center;">
-                        <h2 style="color:#1E5A34; margin:0; font-size:24px; font-weight:bold; letter-spacing:-0.5px;">FRIGORÍFICO INDUSTRIAL TURMERO C.A.</h2>
-                        <p style="margin:4px 0 0 0; font-size:12px; color:#4B5563; font-style:italic;">Carne de excelente calidad a precio justo...</p>
-                    </div>
-                    <h4 style="text-align:center; font-weight:bold; text-transform:uppercase; margin-top:20px; margin-bottom:25px; font-size:14px; color:#111827; letter-spacing:0.5px;">PLANILLA DE RECAUDOS PARA LA CREACIÓN O REGISTRO DEL PROVEEDORES.</h4>
-                    <div style="background-color:#F9FAFB; padding:15px; border:1px solid #E5E7EB; border-radius:4px; font-size:13px; line-height:1.6; margin-bottom:25px;">
-                        <b>Nombre del Proveedor:</b> {reg_sel['Proveedor']}<br/>
-                        <b>Código del Proveedor:</b> {reg_sel['Código']}<br/>
-                        <b>RIF Comercial:</b> {reg_sel['Rif_Prov']}<br/>
-
