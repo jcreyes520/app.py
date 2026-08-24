@@ -33,14 +33,16 @@ BCOS_LISTA_REAL = [
     "0157 - Banco del Sur", "0171 - Banco Activo", "0137 - Banco Sofitasa", "0156 - 100% Banco", 
     "0001 - Banco Central de Venezuela (BCV)", "0146 - Bangente", "0168 - Bancrecer", "0169 - Mi Banco", 
     "0182 - N58 Banco Digital", "Otros (Internacional / Cuenta Extranjera)"
+]
+
 # 📑 LISTA MAESTRA DE LOS 12 RECAUDOS EXHAUSTIVOS DE LA PLANILLA FISCAL REAL DE PLANTA
 RECAUDOS_GLOBAL = [
-    ("Copia del Registro Mercantil.", "mer"), ("Copia del Registro de Información Fiscal (RIF).", "rif"),
-    ("Copia de la Cédula de Identidad del Accionista.", "ced"), ("Licencia de Actividades Económicas.", "lic"),
-    ("Cartas de Referencias Comerciales (Mínimo 2).", "ref_c"), ("Cartas de Referencias Bancarias (Mínimo 2).", "ref_b"),
-    ("Suministros de Datos Bancarios para realizar pagos en cuentas nacionales.", "db"), ("Persona Contacto.", "p_cont"),
-    ("Correo Electrónico.", "email"), ("Permiso sanitario y/o INSAI de los productos (Si aplica)", "san"),
-    ("Declaración de IVA del 16-03-2026 al 31-03-2026.", "d_iva"), ("Declaración Definitiva de ISLR del 01-01-2025 al 31-12-2025.", "d_islr")
+    ("Copia del Registro Mercantil", "mer"), ("Copia del Registro de Información Fiscal (RIF)", "rif"),
+    ("Copia de la Cédula de Identidad del Accionista", "ced"), ("Licencia de Actividades Económicas", "lic"),
+    ("Cartas de Referencias Comerciales (Mínimo 2)", "ref_c"), ("Cartas de Referencias Bancarias (Mínimo 2)", "ref_b"),
+    ("Suministros de Datos Bancarios (Cuentas nacionales)", "db"), ("Persona Contacto Registrada", "p_cont"),
+    ("Correo Electrónico Verificado", "email"), ("Permiso sanitario y/o INSAI de los productos (Si aplica)", "san"),
+    ("Declaración de IVA del 16-03-2026 al 31-03-2026", "d_iva"), ("Declaración Definitiva de ISLR del 01-01-2025 al 31-12-2025", "d_islr")
 ]
 
 if "usuarios_db" not in st.session_state:
@@ -50,6 +52,9 @@ if "usuarios_db" not in st.session_state:
     ]
 if "empresa_db" not in st.session_state: st.session_state["empresa_db"] = {"rs": "FRIGORÍFICO INDUSTRIAL TURMERO C.A. (FITCA)", "rif": "J-00015198-9", "dir": "Calle Las Industrias, Tronconal, Turmero, Edo. Aragua.", "tel": "0244-3214567 / 0244-3214568", "logo_bytes": None}
 
+if "mostrar_botones_cierre" not in st.session_state: st.session_state["mostrar_botones_cierre"] = False
+if "reporte_html_temp" not in st.session_state: st.session_state["reporte_html_temp"] = ""
+if "codigo_temp" not in st.session_state: st.session_state["codigo_temp"] = ""
 if "bitacora_db" not in st.session_state: st.session_state["bitacora_db"] = []
 if "autenticado" not in st.session_state: st.session_state["autenticado"] = False
 
@@ -85,6 +90,7 @@ else:
     st.markdown('</div>', unsafe_allow_html=True)
     if opcion_menu == "⚙️ Configuración":
         st.write("#### ⚙️ PANEL DE CONFIGURACIÓN ADMINISTRATIVA Y PARÁMETROS (SGP)")
+        st.write("##### 🏢 1. Parámetros de Identificación de la Empresa y Carga de Logo")
         new_rs = st.text_input("Razón Social:", value=emp["rs"])
         new_rif = st.text_input("RIF:", value=emp["rif"])
         new_dir = st.text_input("Dirección de Planta:", value=emp["dir"])
@@ -93,7 +99,14 @@ else:
         if f_logo: emp["logo_bytes"] = f_logo.read()
         if st.button("💾 Guardar Parámetros de Planta", use_container_width=True):
             emp["rs"], emp["rif"], emp["dir"], emp["tel"] = new_rs, new_rif, new_dir, new_tel
-            st.success("✅ Parámetros de planta actualizados."); st.rerun()
+            st.success("✅ Parámetros de planta actualizados de forma exitosa."); st.rerun()
+            
+        st.write("---")
+        st.write("##### ✉️ 2. Módulo de Gestión de Correos Electrónicos / Mails de Recepción")
+        nuevo_mail_rec = st.text_input("Agregar Dirección de Correo de Recepción Nueva:", placeholder="ejemplo@fitca.com")
+        if st.button("➕ Registrar Correo de Recepción"):
+            if nuevo_mail_rec and "@" in nuevo_mail_rec: st.session_state["correos_recepcion_list"].append(nuevo_mail_rec); st.success("✅ Mail registrado."); st.rerun()
+        st.dataframe(pd.DataFrame({"Mails Autorizados para Recibir Expedientes": st.session_state["correos_recepcion_list"]}), use_container_width=True, hide_index=True)
 
     elif opcion_menu == "Planilla de Solicitudes":
         st.write("#### 📝 PLANILLA DE REGISTRO PREVIO (ENTRADA DE DATOS)")
@@ -108,7 +121,7 @@ else:
             list_mod_opts = df_provs_mod.apply(lambda row: f"{row['Código']} - {row['Proveedor']}", axis=1).tolist()
             selected_mod_prov = st.selectbox("🔍 Seleccione el Expediente del Proveedor:", list_mod_opts)
             try:
-                if selected_mod_prov and " - " in selected_mod_prov: codigo_a_buscar = int(selected_mod_prov.split(" - ").strip())
+                if selected_mod_prov and " - " in selected_mod_prov: codigo_a_buscar = int(selected_mod_prov.split(" - ")[0].strip())
                 else: codigo_a_buscar = None
             except: codigo_a_buscar = None
 
@@ -126,47 +139,60 @@ else:
         with c_bas2: n_prov = st.text_input("Nombre o Razón Social Comercial Completa:", value=val_nombre, placeholder="TERMO SERVICIOS R.W, C.A.")
         with c_bas3: r_prov = st.text_input("Número de RIF Comercial:", value=val_rif, placeholder="J-XXXXXXX-X")
         with c_bas4: tipo_prov = st.selectbox("Tipo de Gasto Contable:", ["Compras de Inventario / Materia Prima", "Servicios"], index=0)
-
         st.write("##### 2. Información de Contacto Operativo")
-        t_prov = st.text_input("Teléfono Planta:", value=val_telefono)
-        p_cont = st.text_input("Persona Contacto:", value=val_contacto)
-        e_prov = st.text_input("Correo Electrónico:", value=val_correo)
-        tipo_sujeto_sel = st.selectbox("Calificación Fiscal del Contribuyente:", ["Sujeto Pasivo Especial (Especial)", "Contribuyente Ordinario"])
+        c_con1, c_con2, c_con3, c_con4 = st.columns(4)
+        with c_con1: t_prov = st.text_input("Teléfono Obligatorio de Planta:", value=val_telefono, placeholder="0244-XXXXXXX")
+        with c_con2: p_cont = st.text_input("Persona / Contacto de Ventas Autorizado:", value=val_contacto, placeholder="Contacto")
+        with c_con3: e_prov = st.text_input("Correo Electrónico / Mail de Operaciones:", value=val_correo, placeholder="correo@proveedor.com")
+        with c_con4: tipo_sujeto_sel = st.selectbox("Calificación Fiscal del Contribuyente:", ["Sujeto Pasivo Especial (Especial)", "Contribuyente Ordinario"])
 
-        st.write("##### 3. Gestión Multi-Cuenta Financiera")
+        st.write("##### 3. Gestión Multi-Cuenta Financiera (Hasta 3 Canales de Transferencia)")
         st.markdown("**[CANAL BANCARIO N° 1 - Principal Obligatorio]**")
         cb1_1, cb1_2, cb1_3, cb1_4 = st.columns([1, 1, 0.8, 1.2])
-        with cb1_1: bco_1 = st.selectbox("Banco Destino (C1):", BCOS_LISTA_REAL, index=0)
-        with cb1_2: ben_1 = st.text_input("Nombre Beneficiario Pago (C1):", value=val_cuentas.get("c1_ben") if val_cuentas.get("c1_ben") else val_nombre)
-        with cb1_3: t_ben_1 = st.selectbox("Tipo Documento (C1):", ["Empresa (RIF)", "Persona Natural (Cédula)"], index=0)
-        with cb1_4: doc_1 = st.text_input("Documento Identidad Beneficiario (C1):", value=r_prov if r_prov else val_cuentas.get("c1_doc"))
-        n_cta_1 = st.text_input("N° Cuenta Nacional - 20 dígitos (C1):", value=val_cuentas.get("c1_num"), max_chars=20)
+        with cb1_1: bco_1 = st.selectbox("Banco Destino (C1):", BCOS_LISTA_REAL, index=BCOS_LISTA_REAL.index(val_cuentas.get("c1_bco")) if val_cuentas.get("c1_bco") in BCOS_LISTA_REAL else 0, key="bco1")
+        with cb1_2: ben_1 = st.text_input("Nombre Beneficiario Pago (C1):", value=val_cuentas.get("c1_ben") if val_cuentas.get("c1_ben") else val_nombre, key="ben1")
+        with cb1_3: t_ben_1 = st.selectbox("Tipo Documento (C1):", ["Empresa (RIF)", "Persona Natural (Cédula)"], index=0 if val_cuentas.get("c1_tipo") == "Empresa (RIF)" else 1, key="t_ben1")
+        with cb1_4:
+            if t_ben_1 == "Persona Natural (Cédula)": doc_1 = st.text_input("Cédula de Identidad del Beneficiario (C1):", value=val_cuentas.get("c1_doc"), placeholder="Ej: V-12345678", key="doc1")
+            else: doc_1 = st.text_input("RIF Cuenta Beneficiario (C1):", value=r_prov if r_prov else val_cuentas.get("c1_doc"), key="doc1")
+        n_cta_1 = st.text_input("N° Cuenta Nacional - 20 dígitos (C1):", value=val_cuentas.get("c1_num"), max_chars=20, key="n_cta1")
 
         st.write("---")
-        activar_c2 = st.checkbox("➕ ¿Registrar Canal Bancario Adicional N° 2?", value=False)
-        bco_2, ben_2, n_cta_2 = "Otros", "", ""
+        activar_c2 = st.checkbox("➕ ¿Registrar Canal Bancario Adicional N° 2 para este Proveedor?", value=True if val_cuentas.get("c2_num") else False, key="chk_act_c2")
+        bco_2, ben_2, t_ben_2, doc_2, n_cta_2 = "Otros", "", "Empresa (RIF)", "", ""
         if activar_c2:
-            cb2_1, cb2_2, cb2_3 = st.columns(3)
-            with cb2_1: bco_2 = st.selectbox("Banco Destino (C2):", BCOS_LISTA_REAL)
-            with cb2_2: ben_2 = st.text_input("Nombre Beneficiario Pago (C2):")
-            with cb2_3: n_cta_2 = st.text_input("N° Cuenta Nacional (C2):", max_chars=20)
+            st.markdown("**[CANAL BANCARIO N° 2 Opcional]**")
+            cb2_1, cb2_2, cb2_3, cb2_4 = st.columns([1, 1, 0.8, 1.2])
+            with cb2_1: bco_2 = st.selectbox("Banco Destino (C2):", BCOS_LISTA_REAL, index=BCOS_LISTA_REAL.index(val_cuentas.get("c2_bco")) if val_cuentas.get("c2_bco") in BCOS_LISTA_REAL else 0, key="bco2")
+            with cb2_2: ben_2 = st.text_input("Nombre Beneficiario Pago (C2):", value=val_cuentas.get("c2_ben"), key="ben2")
+            with cb2_3: t_ben_2 = st.selectbox("Tipo Documento (C2):", ["Empresa (RIF)", "Persona Natural (Cédula)"], index=0 if val_cuentas.get("c2_tipo") == "Empresa (RIF)" else 1, key="t_ben2")
+            with cb2_4:
+                if t_ben_2 == "Persona Natural (Cédula)": doc_2 = st.text_input("Cédula de Identidad del Beneficiario (C2):", value=val_cuentas.get("c2_doc"), key="doc2")
+                else: doc_2 = st.text_input("RIF Cuenta Beneficiario (C2):", value=val_cuentas.get("c2_doc"), key="doc2")
+            n_cta_2 = st.text_input("N° Cuenta Nacional - 20 dígitos (C2):", value=val_cuentas.get("c2_num"), max_chars=20, key="n_cta2")
 
-        activar_c3 = st.checkbox("➕ ¿Registrar Canal Bancario Adicional N° 3?", value=False)
-        bco_3, ben_3, n_cta_3 = "Otros", "", ""
+        st.write("---")
+        activar_c3 = st.checkbox("➕ ¿Registrar Canal Bancario Adicional N° 3 para este Proveedor?", value=True if val_cuentas.get("c3_num") else False, key="chk_act_c3")
+        bco_3, ben_3, t_ben_3, doc_3, n_cta_20_3 = "Otros", "", "Empresa (RIF)", "", ""
         if activar_c3:
-            cb3_1, cb3_2, cb3_3 = st.columns(3)
-            with cb3_1: bco_3 = st.selectbox("Banco Destino (C3):", BCOS_LISTA_REAL)
-            with cb3_2: ben_3 = st.text_input("Nombre Beneficiario Pago (C3):")
-            with cb3_3: n_cta_3 = st.text_input("N° Cuenta Nacional (C3):", max_chars=20)
+            st.markdown("**[CANAL BANCARIO N° 3 Opcional]**")
+            cb3_1, cb3_2, cb3_3, cb3_4 = st.columns([1, 1, 0.8, 1.2])
+            with cb3_1: bco_3 = st.selectbox("Banco Destino (C3):", BCOS_LISTA_REAL, index=BCOS_LISTA_REAL.index(val_cuentas.get("c3_bco")) if val_cuentas.get("c3_bco") in BCOS_LISTA_REAL else 0, key="bco3")
+            with cb3_2: ben_3 = st.text_input("Nombre Beneficiario Pago (C3):", value=val_cuentas.get("c3_ben"), key="ben3")
+            with cb3_3: t_ben_3 = st.selectbox("Tipo Documento (C3):", ["Empresa (RIF)", "Persona Natural (Cédula)"], index=0 if val_cuentas.get("c3_tipo") == "Empresa (RIF)" else 1, key="t_ben3")
+            with cb3_4:
+                if t_ben_3 == "Persona Natural (Cédula)": doc_3 = st.text_input("Cédula de Identidad del Beneficiario (C3):", value=val_cuentas.get("c3_doc"), key="doc3")
+                else: doc_3 = st.text_input("RIF Cuenta Beneficiario (C3):", value=val_cuentas.get("c3_doc"), key="doc3")
+            n_cta_20_3 = st.text_input("N° Cuenta Nacional - 20 dígitos (C3):", value=val_cuentas.get("c3_num"), max_chars=20, key="n_cta3")
 
         st.write("##### 4. Checklist Contable y Notas de Soportes")
         chks = {}; notas_checks = {}
         for lbl, k in RECAUDOS_GLOBAL:
-            c_col1, c_col2 = st.columns([2, 1])
+            c_col1, c_col2 = st.columns(2)
             with c_col1: chks[k] = st.checkbox(f"Entregó: {lbl}", value=val_soportes.get(k, False), key=f"chk_{k}")
-            with c_col2: notas_checks[k] = st.text_input(f"Nota marginal para: {lbl[:20]}...", value=val_notas_marginales.get(k, ""), placeholder="Ej: (Enviaron 1)", key=f"not_{k}")
+            with c_col2: notas_checks[k] = st.text_input(f"Nota de planta para: {lbl[:20]}...", value=val_notas_marginales.get(k, ""), placeholder="Ej: (Enviaron 1)", key=f"not_{k}")
 
-        obs_compras = st.text_area("Observaciones Generales de Control Contable:", value=val_notas)
+        obs_compras = st.text_area("Observaciones de Control Contable Marginales:", value=val_notas, key="obs_main")
         if st.button("⚙️ Procesar Certificación y Grabar Registro en Matriz", use_container_width=True, key="btn_grabar_matriz"):
             n_cta_cleaned = "".join(n_cta_1.split()).replace("-", "")
             if len(n_cta_cleaned) != 20: st.error("❌ ERROR: La cuenta 1 debe poseer exactamente 20 dígitos.")
@@ -215,7 +241,7 @@ else:
                     
                     html_rep_inf_temp += f"""
                             <tr>
-                                <td style="border:1px solid #000000; padding:8px; text-align:center; width:8%; font-size:14px; background-color:{"#FFFFFF" if res_soportes.get(k) else "#FFFFFF"};">{marca_status}</td>
+                                <td style="border:1px solid #000000; padding:8px; text-align:center; width:8%; font-size:14px; background-color:#FFFFFF;">{marca_status}</td>
                                 <td style="border:1px solid #000000; padding:8px; color:#000000; font-size:13px;">{lbl}{nota_marginal_txt}</td>
                             </tr>
                     """
@@ -232,7 +258,8 @@ else:
                 """
                 st.session_state["reporte_html_temp"] = html_rep_inf_temp
                 st.session_state["codigo_temp"] = c_prov; st.session_state["mostrar_botones_cierre"] = True
-                st.success("✅ EXPEDIENTE PROCESADO Y ASENTADO CON ÉXITO.")
+                lista_destinatarios = ", ".join(st.session_state["correos_recepcion_list"])
+                st.success(f"✅ REGISTRO MAESTRO PROCESADO CON ÉXITO. Expediente enviado por mail a: {lista_destinatarios}")
                 st.rerun()
 
         if st.session_state.get("mostrar_botones_cierre") and st.session_state.get("reporte_html_temp"):
@@ -257,10 +284,10 @@ else:
                 st.markdown(f"**Proveedor:** {reg_sel['Proveedor']} | **RIF:** {reg_sel['Rif_Prov']} | **Calificación SENIAT:** `{reg_sel.get('Contribuyente')}`")
                 c_maps = reg_sel.get('Cuentas_Bancarias', {})
                 st.markdown(f"**C1 Principal:** Banco: {c_maps.get('c1_bco')} | Beneficiario: {c_maps.get('c1_ben')} | N° Cuenta: `{c_maps.get('c1_num')}`")
-                st.markdown(f"""<div style="background-color:#FFF3CD; padding:12px; border-left:5px solid #FFA000; color:#856404; font-family:monospace; font-size:12px;">⚠️ <b>DOCUMENTOS RECAUDOS FALTANTES DETECTADOS:** {reg_sel['Faltantes']}</div>""", unsafe_allow_html=True)
+                st.markdown(f"""<div style="background-color:#FFF3CD; padding:12px; border-left:5px solid #FFA000; color:#856404; font-family:monospace; font-size:12px;">⚠️ <b>DOCUMENTOS RECAUDOS FALTANTES DETECTADOS:</b> {reg_sel['Faltantes']}</div>""", unsafe_allow_html=True)
 
                 st.write("---")
-                st.write("##### 📄 Vista de Formato Calcado (Réplica Formato Real Planta)")
+                st.write("##### 📄 Planilla Calcada de Formato de Planta (Modelo Termo Servicios)")
                 
                 html_rep_inf = f"""
                 <div style="background-color:#FFFFFF; padding:35px; border:2px solid #1E5A34; max-width:750px; margin:10px auto; color:#000000; font-family:Arial, sans-serif;">
@@ -271,6 +298,3 @@ else:
                     <h4 style="text-align:center; font-weight:bold; text-transform:uppercase; margin-top:20px; margin-bottom:25px; font-size:14px; color:#111827; letter-spacing:0.5px;">PLANILLA DE RECAUDOS PARA LA CREACIÓN O REGISTRO DEL PROVEEDORES.</h4>
                     <div style="background-color:#F9FAFB; padding:15px; border:1px solid #E5E7EB; border-radius:4px; font-size:13px; line-height:1.6; margin-bottom:25px;">
                         <b>Nombre del Proveedor:</b> {reg_sel['Proveedor']}<br/>
-                        <b>Código del Proveedor:</b> {reg_sel['Código']}<br/>
-                        <b>RIF Comercial:</b> {reg_sel['Rif_Prov']}<br/>
-
