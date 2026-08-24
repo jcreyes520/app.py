@@ -27,7 +27,7 @@ st.markdown("""
 BCOS_LISTA_REAL = [
     "0102 - Banco de Venezuela (BDV)", "0163 - Banco del Tesoro", "0175 - Banco Digital de los Trabajadores (BDT)",
     "0177 - Banco de la Fuerza Armada National Bolivariana (BANFANB)", "0166 - Banco Agrícola de Venezuela",
-    "0134 - Banesco Banco Universal", "0105 - Mercantil Banco", "0108 - BBVA Provincial", "0191 - Banco Nacional de Crédito (BNC)",
+    "0134 - Banesco Banco Universal", "0105 - Mercantil Banco", "0108 - BBVA Provincial", "0191 - Banco National de Crédito (BNC)",
     "0172 - Bancamiga Banco Universal", "0114 - BanCaribe", "0115 - Banco Exterior", "0138 - Banco Plaza", 
     "0151 - Banco Fondo Común (BFC)", "0174 - Banplus", "0104 - Banco Venezolano de Crédito (BVC)", "0128 - Banco Caroní",
     "0157 - Banco del Sur", "0171 - Banco Activo", "0137 - Banco Sofitasa", "0156 - 100% Banco", 
@@ -129,6 +129,7 @@ else:
         accion_planilla = st.radio("Operación Contable:", ["➕ Registrar Nuevo Proveedor", "✏️ Modificar / Actualizar Proveedor Existente"], horizontal=True)
         val_nombre, val_rif, val_contacto, val_telefono, val_correo, val_codigo, val_tipo, val_notas = "", "", "", "", "", 820, "Compras de Inventario / Materia Prima", ""
         val_soportes = {k: False for _, k in RECAUDOS_GLOBAL}; idx_match = None; tipo_sujeto_sel = "Sujeto Pasivo Especial (Especial)"
+        val_venc_rif = datetime.now().date()
         val_cuentas = {"c1_bco": "0102 - Banco de Venezuela (BDV)", "c1_ben": "", "c1_tipo": "Empresa (RIF)", "c1_doc": "", "c1_num": "", "c2_bco": "0102 - Banco de Venezuela (BDV)", "c2_ben": "", "c2_tipo": "Empresa (RIF)", "c2_doc": "", "c2_num": "", "c3_bco": "0102 - Banco de Venezuela (BDV)", "c3_ben": "", "c3_tipo": "Empresa (RIF)", "c3_doc": "", "c3_num": ""}
 
         if accion_planilla == "✏️ Modificar / Actualizar Proveedor Existente" and len(st.session_state["bitacora_db"]) > 0:
@@ -146,6 +147,9 @@ else:
                     idx_match = match; datos_viejos = st.session_state["bitacora_db"][idx_match]
                     val_nombre, val_rif, val_contacto, val_telefono, val_correo, val_codigo, val_tipo, val_notas = datos_viejos['Proveedor'], datos_viejos.get('Rif_Prov',''), datos_viejos.get('Contacto',''), datos_viejos['Teléfono'], datos_viejos.get('Correo',''), datos_viejos['Código'], datos_viejos.get('Tipo','Compras de Inventario / Materia Prima'), datos_viejos.get('Notas','')
                     val_soportes, val_cuentas, tipo_sujeto_sel = datos_viejos.get('Soportes', val_soportes), datos_viejos.get('Cuentas_Bancarias', val_cuentas), datos_viejos.get('Contribuyente', "Sujeto Pasivo Especial (Especial)")
+                    if 'Vencimiento_Rif' in datos_viejos:
+                        try: val_venc_rif = datetime.strptime(datos_viejos['Vencimiento_Rif'], "%Y-%m-%d").date()
+                        except: pass
 
         st.write("##### 1. Identificación Comercial Básica")
         c_bas1, c_bas2, c_bas3, c_bas4 = st.columns(4)
@@ -155,10 +159,13 @@ else:
         with c_bas4: tipo_prov = st.selectbox("Tipo de Proveedor (Clasificación Gasto):", ["Compras de Inventario / Materia Prima", "Servicios (Contratistas, Mantenimiento, Fletes)"], index=0 if val_tipo == "Compras de Inventario / Materia Prima" else 1)
 
         st.write("##### 2. Información de Contacto Operativo")
-        t_prov = st.text_input("Teléfono Obligatorio de Planta:", value=val_telefono, placeholder="0244-XXXXXXX")
-        p_cont = st.text_input("Persona / Contacto de Ventas Autorizado:", value=val_contacto, placeholder="Contacto")
-        e_prov = st.text_input("Correo Electrónico / Mail de Operaciones:", value=val_correo, placeholder="correo@proveedor.com")
-        tipo_sujeto_sel = st.selectbox("Calificación Fiscal del Contribuyente:", ["Sujeto Pasivo Especial (Especial)", "Contribuyente Ordinario"])
+        c_con1, c_con2, c_con3, c_con4 = st.columns(4)
+        with c_con1: t_prov = st.text_input("Teléfono Obligatorio de Planta:", value=val_telefono, placeholder="0244-XXXXXXX")
+        with c_con2: p_cont = st.text_input("Persona / Contacto de Ventas Autorizado:", value=val_contacto, placeholder="Contacto")
+        with c_con3: e_prov = st.text_input("Correo Electrónico / Mail de Operaciones:", value=val_correo, placeholder="correo@proveedor.com")
+        with c_con4: tipo_sujeto_sel = st.selectbox("Calificación Fiscal del Contribuyente:", ["Sujeto Pasivo Especial (Especial)", "Contribuyente Ordinario"])
+        
+        venc_rif_date = st.date_input("Fecha de Vencimiento Legal del RIF:", value=val_venc_rif)
 
         st.write("##### 3. Gestión Multi-Cuenta Financiera (Hasta 3 Canales de Transferencia)")
         st.markdown("**[CANAL BANCARIO N° 1 - Principal Obligatorio]**")
@@ -186,8 +193,3 @@ else:
             n_cta_2 = st.text_input("N° Cuenta Nacional - 20 dígitos (C2):", value=val_cuentas.get("c2_num"), max_chars=20, key="n_cta2")
 
         activar_c3 = st.checkbox("➕ ¿Registrar Canal Bancario Adicional N° 3 para este Proveedor?", value=True if val_cuentas.get("c3_num") else False, key="chk_act_c3")
-        bco_3, ben_3, t_ben_3, doc_3, n_cta_20_3 = "Otros", "", "Empresa (RIF)", "", ""
-        if activar_c3:
-            st.markdown("**[CANAL BANCARIO N° 3 Opcional]**")
-            cb3_1, cb3_2, cb3_3, cb3_4 = st.columns([1, 1, 0.8, 1.2])
-            with cb3_1: bco_3 = st.selectbox("Banco Destino (C3):", BCOS_LISTA_REAL, index=BCOS_LISTA_REAL.index(val_cuentas.get("c3_bco")) if val_cuentas.get("c3_bco") in BCOS_LISTA_REAL else 0, key="bco3")
